@@ -1,0 +1,82 @@
+{% load static %}
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>
+    {% block head_title %}
+    Blog ZV Labs
+    {% endblock head_title %}
+  </title>
+  <script>
+    try {
+      const tema = localStorage.getItem("tema");
+      if (tema) document.documentElement.dataset.theme = tema;
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="{% static 'blog/blog.css' %}">
+  {% block extra_head %}
+  {% endblock extra_head %}
+</head>
+<body>
+  <header class="topo">
+    <a class="marca" href="{% url 'post_list' %}">Blog <strong>ZV Labs</strong></a>
+    <nav class="acoes">
+      <button type="button" class="botao-tema" data-alternar-tema aria-label="Alternar tema">◐</button>
+      {% if user.is_authenticated %}
+      {% if inscricao_ativa %}
+      <a class="link" href="{{ inscricao_ativa.get_cancelar_url }}">Cancelar inscrição</a>
+      {% else %}
+      <form method="post" action="{% url 'subscribe' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="botao">Inscrever-se</button>
+      </form>
+      {% endif %}
+      <form method="post" action="{% url 'account_logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="botao botao-secundario">Sair</button>
+      </form>
+      {% else %}
+      <details class="painel-inscricao">
+        <summary class="botao">Inscrever-se</summary>
+        <div class="painel">
+          <p>Entre com sua conta para receber cada post novo por e-mail e comentar.</p>
+          <form method="post" action="{% provider_login_url 'google' %}">
+            {% csrf_token %}
+            <button type="submit" class="botao botao-largo">Entrar com Google</button>
+          </form>
+          <form method="post" action="{% provider_login_url 'github' %}">
+            {% csrf_token %}
+            <button type="submit" class="botao botao-largo">Entrar com GitHub</button>
+          </form>
+        </div>
+      </details>
+      {% endif %}
+    </nav>
+  </header>
+
+  {% if messages %}
+  <ul class="mensagens">
+    {% for message in messages %}
+    <li class="mensagem mensagem-{{ message.tags }}">{{ message }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <main class="conteudo">
+    {% block content %}
+    {% endblock content %}
+  </main>
+
+  <footer class="rodape">
+    <p>ZV Labs · Vitor Zavan</p>
+  </footer>
+
+  <script src="{% static 'blog/blog.js' %}" defer></script>
+  {% block extra_body %}
+  {% endblock extra_body %}
+</body>
+</html>

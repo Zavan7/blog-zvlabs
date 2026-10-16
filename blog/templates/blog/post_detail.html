@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block head_title %}
+{{ post.titulo }} · Blog ZV Labs
+{% endblock head_title %}
+{% block content %}
+<article class="post">
+  <a class="voltar" href="{% url 'post_list' %}">← Todos os posts</a>
+  <header>
+    <time datetime="{{ post.publicado_em|date:'c' }}">{{ post.publicado_em|date:"d \d\e F \d\e Y" }}</time>
+    <h1>{{ post.titulo }}</h1>
+    <p class="resumo">{{ post.resumo }}</p>
+    <ul class="assuntos">
+      {% for assunto in post.assuntos.all %}
+      <li><a href="{% url 'post_list' %}?assunto={{ assunto.slug }}">{{ assunto.nome }}</a></li>
+      {% endfor %}
+    </ul>
+  </header>
+  <div class="texto-post">
+    {{ post.conteudo_html }}
+  </div>
+</article>
+
+<section class="comentarios" id="comentarios">
+  <h2>Comentários</h2>
+  {% for comentario in comentarios %}
+  <article class="comentario">
+    <p class="autor">{{ comentario.autor.get_full_name|default:comentario.autor.username }} · <time datetime="{{ comentario.criado_em|date:'c' }}">{{ comentario.criado_em|date:"d/m/Y" }}</time></p>
+    <p>{{ comentario.texto|linebreaksbr }}</p>
+  </article>
+  {% empty %}
+  <p class="vazio">Nenhum comentário ainda.</p>
+  {% endfor %}
+
+  {% if user.is_authenticated %}
+  <form method="post" action="{% url 'comment_create' post.slug %}" class="form-comentario">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <p class="aviso">Os comentários aparecem depois de aprovados.</p>
+    <button type="submit" class="botao">Enviar comentário</button>
+  </form>
+  {% else %}
+  <p class="aviso">Entre pelo botão "Inscrever-se" no topo para comentar.</p>
+  {% endif %}
+</section>
+{% endblock content %}

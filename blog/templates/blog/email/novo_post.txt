@@ -1,0 +1,13 @@
+{% autoescape off %}
+Post novo no Blog ZV Labs
+
+{{ post.titulo }}
+
+{{ post.resumo }}
+
+Ler o post: {{ post_url }}
+
+--
+Você recebeu este e-mail porque se inscreveu no Blog ZV Labs.
+Cancelar inscrição: {{ cancelar_url }}
+{% endautoescape %}

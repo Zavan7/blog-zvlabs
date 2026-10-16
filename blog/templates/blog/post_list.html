@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block head_title %}
+{% if assunto_atual %}
+{{ assunto_atual.nome }} · Blog ZV Labs
+{% else %}
+Blog ZV Labs
+{% endif %}
+{% endblock head_title %}
+{% block content %}
+<nav class="filtro" aria-label="Filtrar por assunto">
+  {% if assunto_atual %}
+  <a href="{% url 'post_list' %}" class="etiqueta">Todos</a>
+  {% else %}
+  <a href="{% url 'post_list' %}" class="etiqueta ativa" aria-current="page">Todos</a>
+  {% endif %}
+  {% for assunto in assuntos %}
+  {% if assunto == assunto_atual %}
+  <a href="{% url 'post_list' %}?assunto={{ assunto.slug }}" class="etiqueta ativa" aria-current="page">{{ assunto.nome }}</a>
+  {% else %}
+  <a href="{% url 'post_list' %}?assunto={{ assunto.slug }}" class="etiqueta">{{ assunto.nome }}</a>
+  {% endif %}
+  {% endfor %}
+</nav>
+
+<section class="lista-posts">
+  {% for post in posts %}
+  <article class="cartao-post">
+    <time datetime="{{ post.publicado_em|date:'c' }}">{{ post.publicado_em|date:"d \d\e F \d\e Y" }}</time>
+    <h2><a href="{{ post.get_absolute_url }}">{{ post.titulo }}</a></h2>
+    <p>{{ post.resumo }}</p>
+    <ul class="assuntos">
+      {% for assunto in post.assuntos.all %}
+      <li><a href="{% url 'post_list' %}?assunto={{ assunto.slug }}">{{ assunto.nome }}</a></li>
+      {% endfor %}
+    </ul>
+  </article>
+  {% empty %}
+  <p class="vazio">Nenhum post publicado ainda.</p>
+  {% endfor %}
+</section>
+{% endblock content %}

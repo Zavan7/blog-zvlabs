@@ -1,0 +1,60 @@
+[project]
+name = "blog-zvlabs"
+description = "Blog pessoal da ZV Labs em Django."
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "django>=6.1,<6.2",
+    "django-allauth[socialaccount]>=65.20.0",
+    "django-stubs-ext>=6.1.2",
+    "markdown>=3.11.1",
+    "nh3>=0.3.7",
+    "python-dotenv>=1.2.4",
+]
+
+[dependency-groups]
+dev = [
+    "django-stubs>=6.1.2",
+    "mypy>=2.4.0",
+    "ruff>=0.17.1",
+    "types-markdown>=3.10.2.20261007",
+]
+
+[tool.ruff]
+line-length = 79
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "D", "UP", "ANN", "B", "DJ"]
+ignore = ["N818", "D214"]
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = true
+mypy-init-return = true
+
+[tool.ruff.lint.per-file-ignores]
+"*/tests.py" = ["ANN"]
+"*/tests/*" = ["ANN"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+plugins = ["mypy_django_plugin.main"]
+python_version = "3.14"
+disallow_untyped_defs = true
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+exclude = ["/migrations/"]
+
+[[tool.mypy.overrides]]
+module = ["*.tests", "*.tests.*"]
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["allauth.*"]
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "zvblog.settings"

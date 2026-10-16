@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block head_title %}
+Cancelar inscrição · Blog ZV Labs
+{% endblock head_title %}
+{% block content %}
+<section class="caixa">
+  <h1>Cancelar inscrição</h1>
+  {% if inscrito.ativo %}
+  <p>Parar de enviar os posts novos para <strong>{{ inscrito.usuario.email }}</strong>?</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="botao">Cancelar inscrição</button>
+  </form>
+  {% else %}
+  <p>Esta inscrição já está cancelada. Nenhum e-mail novo será enviado.</p>
+  {% endif %}
+  <p><a href="{% url 'post_list' %}">Voltar ao blog</a></p>
+</section>
+{% endblock content %}
