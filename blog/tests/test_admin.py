@@ -117,6 +117,45 @@ class PublicacaoAdminTests(TestCase):
             )
         self.assertEqual(len(mail.outbox), 1)
 
+    def test_lista_mostra_comentarios_pendentes(self):
+        """A lista de posts traz a contagem de pendentes.
+
+        English:
+            The post list shows the pending count.
+        """
+        post = criar_post(self.dono)
+        Comentario.objects.create(post=post, autor=self.staff, texto="Oi")
+        self.client.force_login(self.dono)
+        resposta = self.client.get(reverse("admin:blog_post_changelist"))
+        self.assertContains(resposta, "Comentários pendentes")
+        self.assertContains(
+            resposta,
+            '<td class="field-qtd_comentarios_pendentes">1</td>',
+            html=True,
+        )
+
+    def test_acao_publicar_agora(self):
+        """Rascunho vira publicado com data de agora e notifica.
+
+        English:
+            A draft becomes published with the current date and notifies.
+        """
+        rascunho = criar_post(self.dono, publicado=False)
+        self.client.force_login(self.dono)
+        with self.captureOnCommitCallbacks(execute=True):
+            resposta = self.client.post(
+                reverse("admin:blog_post_changelist"),
+                {
+                    "action": "publicar_agora",
+                    "_selected_action": [rascunho.pk],
+                },
+                follow=True,
+            )
+        self.assertContains(resposta, "1 post(s) publicado(s).")
+        rascunho.refresh_from_db()
+        self.assertTrue(rascunho.esta_publicado)
+        self.assertEqual(len(mail.outbox), 1)
+
     def test_rascunho_nao_envia(self):
         """Rascunho salvo não notifica ninguém.
 
@@ -194,3 +233,53 @@ class ModeracaoAdminTests(TestCase):
         self.assertContains(resposta, "1 comentário(s) aprovado(s).")
         pagina = self.client.get(self.post.get_absolute_url())
         self.assertContains(pagina, "Oi")
+
+    def test_acao_rejeitar(self):
+        """A ação "rejeitar" tira o comentário da fila.
+
+        English:
+            The "rejeitar" action removes the comment from the queue.
+        """
+        self.client.force_login(self.dono)
+        resposta = self.client.post(
+            reverse("admin:blog_comentario_changelist"),
+            {"action": "rejeitar", "_selected_action": [self.comentario.pk]},
+            follow=True,
+        )
+        self.assertContains(resposta, "1 comentário(s) rejeitado(s).")
+        self.comentario.refresh_from_db()
+        self.assertEqual(self.comentario.status, Comentario.Status.REJEITADO)
+
+    def test_mudar_status_no_formulario_registra_data(self):
+        """Aprovar pelo formulário do comentário grava ``moderado_em``.
+
+        English:
+            Approving through the comment form records ``moderado_em``.
+        """
+        self.client.force_login(self.dono)
+        self.client.post(
+            reverse("admin:blog_comentario_change", args=[self.comentario.pk]),
+            {"status": Comentario.Status.APROVADO},
+        )
+        self.comentario.refresh_from_db()
+        self.assertEqual(self.comentario.status, Comentario.Status.APROVADO)
+        self.assertIsNotNone(self.comentario.moderado_em)
+
+
+class InscritoAdminTests(TestCase):
+    """Consulta de inscritos no admin.
+
+    English:
+        Subscriber lookup in the admin.
+    """
+
+    def test_lista_mostra_email(self):
+        """A lista de inscritos mostra o e-mail de cada um.
+
+        English:
+            The subscriber list shows each one's e-mail.
+        """
+        inscrever(criar_usuario("ana"))
+        self.client.force_login(criar_usuario("vitor", superuser=True))
+        resposta = self.client.get(reverse("admin:blog_inscrito_changelist"))
+        self.assertContains(resposta, "ana@exemplo.com")

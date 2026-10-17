@@ -163,21 +163,20 @@ class PostAdmin(SoDonoAdmin):
         form: ModelForm[Post],
         change: bool,
     ) -> None:
-        """Define o autor, completa a data e agenda o e-mail aos inscritos.
+        """Define o autor e agenda o e-mail aos inscritos.
 
-        O autor nunca vem do formulário: é sempre quem está logado.
+        O autor nunca vem do formulário: é sempre quem está logado. A data
+        de publicação que faltar já foi preenchida pelo ``Post.clean``.
 
         English:
-            Sets the author, fills in the date and schedules the e-mail to
-            subscribers.
+            Sets the author and schedules the e-mail to subscribers.
 
             The author never comes from the form: it is always the
-            logged-in user.
+            logged-in user. A missing publication date was already filled
+            in by ``Post.clean``.
         """
         if not change:
             obj.autor = request.user  # type: ignore[assignment]
-        if obj.status == Post.Status.PUBLICADO and obj.publicado_em is None:
-            obj.publicado_em = timezone.now()
         super().save_model(request, obj, form, change)
         services.agendar_notificacao(obj)
 

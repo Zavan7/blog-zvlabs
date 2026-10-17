@@ -86,6 +86,8 @@ BLOCO_DE_CODIGO = re.compile(
     re.DOTALL,
 )
 LINGUAGEM = re.compile(r"language-([\w+#-]+)")
+# Abertura e fechamento de <h1> no HTML já limpo (ver converter_markdown).
+TITULO_H1 = re.compile(r"<(/?)h1\b")
 
 
 class ItemIndice(NamedTuple):
@@ -97,6 +99,64 @@ class ItemIndice(NamedTuple):
 
     ancora: str
     titulo: str
+
+
+class Conversao(NamedTuple):
+    """Resultado da conversão: HTML do post e itens do índice.
+
+    English:
+        Conversion result: post HTML and index items.
+    """
+
+    html: SafeString
+    indice: list[ItemIndice]
+
+
+def converter_markdown(texto: str) -> Conversao:
+    """Converte Markdown em HTML limpo e monta o índice, numa só passada.
+
+    O ``<h1>`` da página é o título do post, então um ``#`` no texto vira
+    ``<h2>``, como um ``##``. A troca roda depois do ``nh3``, sobre tags
+    que ele já validou (o código vem escapado e não casa).
+
+    Args:
+        texto: conteúdo em Markdown.
+
+    Returns:
+        HTML sanitizado (marcado como seguro) e os itens do índice.
+
+    English:
+        Converts Markdown into clean HTML and builds the index, in a single
+        pass.
+
+        The page ``<h1>`` is the post title, so a ``#`` in the text becomes
+        ``<h2>``, like a ``##``. The swap runs after ``nh3``, on tags it has
+        already validated (code comes escaped and does not match).
+
+        Args:
+            texto: Markdown content.
+
+        Returns:
+            Sanitized HTML (marked as safe) and the index items.
+    """
+    conversor = md.Markdown(
+        extensions=EXTENSOES, extension_configs=CONFIG_EXTENSOES
+    )
+    bruto = conversor.convert(texto)
+    limpo = nh3.clean(
+        bruto,
+        tags=TAGS_PERMITIDAS,
+        attributes=ATRIBUTOS_PERMITIDOS,
+        url_schemes={"http", "https", "mailto"},
+        link_rel="noopener noreferrer",
+    )
+    sem_h1 = TITULO_H1.sub(r"<\1h2", limpo)
+    com_codigo = BLOCO_DE_CODIGO.sub(_moldurar_codigo, sem_h1)
+    tokens: list[dict[str, Any]] = getattr(conversor, "toc_tokens", [])
+    return Conversao(
+        mark_safe(com_codigo),  # noqa: S308 - saída já sanitizada pelo nh3
+        _titulos_de_secao(tokens),
+    )
 
 
 def renderizar_markdown(texto: str) -> SafeString:
@@ -117,22 +177,11 @@ def renderizar_markdown(texto: str) -> SafeString:
         Returns:
             Sanitized HTML marked as safe for the template.
     """
-    html = md.markdown(
-        texto, extensions=EXTENSOES, extension_configs=CONFIG_EXTENSOES
-    )
-    limpo = nh3.clean(
-        html,
-        tags=TAGS_PERMITIDAS,
-        attributes=ATRIBUTOS_PERMITIDOS,
-        url_schemes={"http", "https", "mailto"},
-        link_rel="noopener noreferrer",
-    )
-    com_codigo = BLOCO_DE_CODIGO.sub(_moldurar_codigo, limpo)
-    return mark_safe(com_codigo)  # noqa: S308 - saída já sanitizada pelo nh3
+    return converter_markdown(texto).html
 
 
 def indice_markdown(texto: str) -> list[ItemIndice]:
-    """Lista os subtítulos de nível 2 (``##``) do post, na ordem do texto.
+    """Lista os títulos de seção (``#`` e ``##``) do post, na ordem do texto.
 
     As âncoras são as mesmas que a extensão ``toc`` põe nos ``<h2>`` de
     :func:`renderizar_markdown`, então os links do índice chegam neles.
@@ -141,10 +190,10 @@ def indice_markdown(texto: str) -> list[ItemIndice]:
         texto: conteúdo em Markdown.
 
     Returns:
-        Âncora e título de cada subtítulo de nível 2.
+        Âncora e título de cada seção.
 
     English:
-        Lists the post's level-2 headings (``##``), in text order.
+        Lists the post's section headings (``#`` and ``##``), in text order.
 
         The anchors are the same ones the ``toc`` extension puts on the
         ``<h2>`` of :func:`renderizar_markdown`, so the index links reach
@@ -154,40 +203,36 @@ def indice_markdown(texto: str) -> list[ItemIndice]:
             texto: Markdown content.
 
         Returns:
-            Anchor and title of each level-2 heading.
+            Anchor and title of each section.
     """
-    conversor = md.Markdown(
-        extensions=EXTENSOES, extension_configs=CONFIG_EXTENSOES
-    )
-    conversor.convert(texto)
-    tokens: list[dict[str, Any]] = getattr(conversor, "toc_tokens", [])
-    return _titulos_nivel_2(tokens)
+    return converter_markdown(texto).indice
 
 
-def _titulos_nivel_2(tokens: list[dict[str, Any]]) -> list[ItemIndice]:
-    """Percorre a árvore do ``toc`` e devolve só os títulos de nível 2.
+def _titulos_de_secao(tokens: list[dict[str, Any]]) -> list[ItemIndice]:
+    """Percorre a árvore do ``toc`` e devolve os títulos que viram ``<h2>``.
 
     Args:
         tokens: árvore ``toc_tokens`` da extensão ``toc``.
 
     Returns:
-        Os itens de nível 2, na ordem do texto.
+        Os itens de nível 1 e 2, na ordem do texto.
 
     English:
-        Walks the ``toc`` tree and returns only the level-2 headings.
+        Walks the ``toc`` tree and returns the headings that become
+        ``<h2>``.
 
         Args:
             tokens: ``toc_tokens`` tree from the ``toc`` extension.
 
         Returns:
-            The level-2 items, in text order.
+            The level-1 and level-2 items, in text order.
     """
     itens: list[ItemIndice] = []
     for token in tokens:
-        if token["level"] == 2:
+        if token["level"] <= 2:
             # O toc entrega o nome já escapado; o template escapa de novo.
             itens.append(ItemIndice(token["id"], html.unescape(token["name"])))
-        itens.extend(_titulos_nivel_2(token["children"]))
+        itens.extend(_titulos_de_secao(token["children"]))
     return itens
 
 

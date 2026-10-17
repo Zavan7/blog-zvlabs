@@ -229,6 +229,11 @@ def notificar_inscritos(post: Post) -> int:
     só uma consegue marcar e enviar. Se o envio falhar, a marca é desfeita
     para a próxima tentativa.
 
+    Limite aceito: se o SMTP cair no meio da lista, quem já recebeu recebe
+    de novo na próxima tentativa, porque o envio é marcado por post e não
+    por inscrito. Com poucos inscritos o risco é pequeno; se crescer, a
+    saída é um registro de envio por inscrito.
+
     Args:
         post: post a anunciar.
 
@@ -243,6 +248,11 @@ def notificar_inscritos(post: Post) -> int:
         NULL``: if two calls run together (admin and scheduled command),
         only one manages to mark and send. If sending fails, the mark is
         undone for the next attempt.
+
+        Accepted limit: if SMTP drops midway through the list, whoever
+        already got it gets it again on the next attempt, because sending
+        is marked per post, not per subscriber. With few subscribers the
+        risk is small; if it grows, the fix is a per-subscriber send record.
 
         Args:
             post: post to announce.

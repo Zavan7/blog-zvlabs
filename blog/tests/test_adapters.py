@@ -53,6 +53,17 @@ class AdapterTests(TestCase):
         """
         self.assertFalse(ContaAdapter().is_open_for_signup(self.request))
 
+    def test_cadastro_social_aberto(self):
+        """Quem vem do Google ou do GitHub ganha conta na hora.
+
+        English:
+            Whoever comes from Google or GitHub gets an account right away.
+        """
+        adapter = ContaSocialAdapter()
+        self.assertTrue(
+            adapter.is_open_for_signup(self.request, self._sociallogin())
+        )
+
     def test_email_nao_verificado_recusado(self):
         """Provedor sem e-mail verificado: login recusado.
 

@@ -10,9 +10,10 @@ from django.conf import settings
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.functional import cached_property
 from django.utils.safestring import SafeString
 
-from blog.texto import ItemIndice, indice_markdown, renderizar_markdown
+from blog.texto import Conversao, ItemIndice, converter_markdown
 
 # Ritmo médio de leitura usado no "min de leitura".
 PALAVRAS_POR_MINUTO = 200
@@ -131,15 +132,32 @@ class Post(models.Model):
     objects = PostQuerySet.as_manager()
 
     class Meta:
-        """Mais recentes primeiro.
+        """Mais recentes primeiro; publicado sempre tem data.
+
+        A constraint garante no banco o que o ``clean`` faz no formulário:
+        um post publicado sem data nunca apareceria para os leitores.
 
         English:
-            Newest first.
+            Newest first; a published post always has a date.
+
+            The constraint enforces in the database what ``clean`` does in
+            the form: a published post without a date would never show up.
         """
 
         ordering = ["-publicado_em", "-criado_em"]
         verbose_name = "post"
         verbose_name_plural = "posts"
+        constraints = [
+            models.CheckConstraint(
+                # "publicado" é Post.Status.PUBLICADO, que o Meta não enxerga.
+                condition=~models.Q(status="publicado")
+                | models.Q(publicado_em__isnull=False),
+                name="post_publicado_tem_data",
+                violation_error_message=(
+                    "Post publicado precisa de data de publicação."
+                ),
+            ),
+        ]
 
     def __str__(self) -> str:
         """Retorna o título do post.
@@ -157,6 +175,21 @@ class Post(models.Model):
         """
         return reverse("post_detail", kwargs={"slug": self.slug})
 
+    def clean(self) -> None:
+        """Preenche a data de publicação com agora, se faltar.
+
+        Roda na validação do formulário (admin), antes da checagem da
+        constraint ``post_publicado_tem_data``.
+
+        English:
+            Fills in the publication date with now, if missing.
+
+            Runs during form validation (admin), before the
+            ``post_publicado_tem_data`` constraint check.
+        """
+        if self.status == self.Status.PUBLICADO and self.publicado_em is None:
+            self.publicado_em = timezone.now()
+
     @property
     def esta_publicado(self) -> bool:
         """Indica se o post já está visível para os leitores.
@@ -170,6 +203,16 @@ class Post(models.Model):
             and self.publicado_em <= timezone.now()
         )
 
+    @cached_property
+    def conversao(self) -> Conversao:
+        """Converte o Markdown uma vez por instância (HTML e índice juntos).
+
+        English:
+            Converts the Markdown once per instance (HTML and index
+            together).
+        """
+        return converter_markdown(self.conteudo)
+
     @property
     def conteudo_html(self) -> SafeString:
         """Retorna o conteúdo convertido de Markdown para HTML seguro.
@@ -177,16 +220,16 @@ class Post(models.Model):
         English:
             Returns the content converted from Markdown to safe HTML.
         """
-        return renderizar_markdown(self.conteudo)
+        return self.conversao.html
 
     @property
     def indice(self) -> list[ItemIndice]:
-        """Retorna os subtítulos ``##`` do post, para o índice lateral.
+        """Retorna os títulos de seção do post, para o índice lateral.
 
         English:
-            Returns the post's ``##`` headings, for the side index.
+            Returns the post's section headings, for the side index.
         """
-        return indice_markdown(self.conteudo)
+        return self.conversao.indice
 
     @property
     def minutos_leitura(self) -> int:

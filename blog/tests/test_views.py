@@ -466,6 +466,21 @@ class InscricaoViewTests(TestCase):
         self.assertEqual(resposta.status_code, 302)
         self.assertFalse(Inscrito.objects.exists())
 
+    def test_conta_sem_email_nao_inscreve(self):
+        """Sem e-mail não há para onde mandar o post: recusa com aviso.
+
+        English:
+            Without an e-mail there is nowhere to send the post: refused
+            with a warning.
+        """
+        sem_email = criar_usuario("bia", email="")
+        sem_email.email = ""
+        sem_email.save()
+        self.client.force_login(sem_email)
+        resposta = self.client.post(reverse("subscribe"), follow=True)
+        self.assertContains(resposta, "sua conta não tem e-mail")
+        self.assertFalse(Inscrito.objects.exists())
+
     def test_logado_inscreve(self):
         """POST cria a inscrição e volta para a página de origem.
 
