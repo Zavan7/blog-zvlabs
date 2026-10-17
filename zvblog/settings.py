@@ -91,7 +91,13 @@ ALLOWED_HOSTS = env_lista("ALLOWED_HOSTS", "localhost,127.0.0.1")
 CSRF_TRUSTED_ORIGINS = env_lista("CSRF_TRUSTED_ORIGINS")
 
 # Endereço público do blog, usado nos links dos e-mails (sem barra final).
-SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
+# Fora do modo de desenvolvimento é obrigatório: sem ele os e-mails sairiam
+# com links para 127.0.0.1.
+SITE_URL = os.getenv("SITE_URL", "").strip().rstrip("/")
+if not SITE_URL:
+    if not DEBUG:
+        raise ImproperlyConfigured("Defina SITE_URL no arquivo .env.")
+    SITE_URL = "http://127.0.0.1:8000"
 
 # Portfólio ZV Labs (Maestro), para o menu e o rodapé. Vazio esconde os links.
 PORTFOLIO_URL = os.getenv("PORTFOLIO_URL", "").strip()
@@ -263,6 +269,30 @@ else:
             "BACKEND": "django.core.mail.backends.console.EmailBackend",
         },
     }
+
+# --- Log ---------------------------------------------------------------------
+# Mensagens do app (como a falha ao enviar e-mail aos inscritos) vão para o
+# terminal, que o servidor de produção guarda (systemd, Docker).
+
+LOGGING: dict[str, Any] = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simples": {
+            "format": "{asctime} {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "simples",
+        },
+    },
+    "loggers": {
+        "blog": {"handlers": ["console"], "level": "INFO"},
+    },
+}
 
 # --- Segurança em produção ---------------------------------------------------
 

@@ -220,7 +220,7 @@ class DetalheTests(TestCase):
         resposta = self.client.get(post.get_absolute_url())
         self.assertContains(
             resposta,
-            '<a class="indice-link" href="#o-problema">O problema</a>',
+            '<a class="indice-link" href="#secao-o-problema">O problema</a>',
             html=True,
         )
         self.assertContains(resposta, "1 min")
@@ -326,6 +326,22 @@ class VizinhosTests(TestCase):
         resposta = self.client.get(self.antigo.get_absolute_url())
         self.assertIsNone(resposta.context["anterior"])
         self.assertNotContains(resposta, "Post anterior")
+
+    def test_mesma_data_nao_pula_post(self):
+        """Posts publicados juntos se apontam pelo pk.
+
+        English:
+            Posts published together point to each other by pk.
+        """
+        data = self.novo.publicado_em
+        gemeo = criar_post(
+            self.autor, slug="gemeo", titulo="Gêmeo", publicado_em=data
+        )
+        resposta = self.client.get(self.novo.get_absolute_url())
+        self.assertEqual(resposta.context["proximo"], gemeo)
+        resposta = self.client.get(gemeo.get_absolute_url())
+        self.assertEqual(resposta.context["anterior"], self.novo)
+        self.assertIsNone(resposta.context["proximo"])
 
 
 class ComentarTests(TestCase):
@@ -472,6 +488,30 @@ class InscricaoViewTests(TestCase):
             reverse("subscribe"), {"next": "//malicioso.com"}
         )
         self.assertEqual(resposta["Location"], "/")
+
+    def test_next_com_barra_invertida_ignorado(self):
+        r"""``/\site`` também é outro site para o navegador.
+
+        English:
+            ``/\site`` is also another site for the browser.
+        """
+        self.client.force_login(self.leitor)
+        resposta = self.client.post(
+            reverse("subscribe"), {"next": "/\\malicioso.com"}
+        )
+        self.assertEqual(resposta["Location"], "/")
+
+    def test_next_com_query_string_seguido(self):
+        """Caminho interno com filtro volta para o mesmo lugar.
+
+        English:
+            An internal path with a filter returns to the same place.
+        """
+        self.client.force_login(self.leitor)
+        resposta = self.client.post(
+            reverse("subscribe"), {"next": "/?assunto=django"}
+        )
+        self.assertEqual(resposta["Location"], "/?assunto=django")
 
     def test_inscrever_por_get_nao_permitido(self):
         """Inscrever só por POST.

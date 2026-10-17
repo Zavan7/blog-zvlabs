@@ -4,6 +4,8 @@ English:
     Admin tests: only the owner publishes and moderates.
 """
 
+from unittest.mock import patch
+
 from django.contrib.auth.models import Permission, User
 from django.core import mail
 from django.test import TestCase
@@ -74,6 +76,27 @@ class PublicacaoAdminTests(TestCase):
         self.assertIsNotNone(post.publicado_em)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["ana@exemplo.com"])
+
+    def test_falha_no_envio_nao_quebra_o_admin(self):
+        """SMTP fora do ar: o post é salvo e fica para o comando reenviar.
+
+        English:
+            SMTP down: the post is saved and left for the command to resend.
+        """
+        self.client.force_login(self.dono)
+        with (
+            patch(
+                "django.core.mail.backends.locmem.EmailBackend.send_messages",
+                side_effect=OSError("SMTP fora do ar"),
+            ),
+            self.assertLogs("blog.services", level="ERROR"),
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            resposta = self.client.post(
+                reverse("admin:blog_post_add"), self._dados_post()
+            )
+        self.assertEqual(resposta.status_code, 302)
+        self.assertIsNone(Post.objects.get().notificado_em)
 
     def test_salvar_de_novo_nao_reenvia(self):
         """Editar um post já anunciado não manda outro e-mail.

@@ -445,6 +445,7 @@ p { text-wrap: pretty; }
 
 /* Código com numeração por CSS (não entra na seleção) */
 .codigo {
+  /* <figure> tem margem lateral própria; o 0 do meio a zera. */
   margin: 28px 0 32px;
   overflow: hidden;
   background: var(--painel);

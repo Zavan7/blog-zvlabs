@@ -14,8 +14,10 @@ import uuid
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import (
     require_GET,
     require_http_methods,
@@ -273,15 +275,24 @@ def _pagina_post(
         .select_related("autor")
         .prefetch_related("autor__socialaccount_set")
     )
+    # Posts publicados juntos ("Publicar agora") têm a mesma data; o pk
+    # desempata, senão um pularia o outro na navegação.
     publicados = Post.objects.publicados()
+    mesma_data = Q(publicado_em=post.publicado_em)
     anterior = (
-        publicados.filter(publicado_em__lt=post.publicado_em)
-        .order_by("-publicado_em")
+        publicados.filter(
+            Q(publicado_em__lt=post.publicado_em)
+            | mesma_data & Q(pk__lt=post.pk)
+        )
+        .order_by("-publicado_em", "-pk")
         .first()
     )
     proximo = (
-        publicados.filter(publicado_em__gt=post.publicado_em)
-        .order_by("publicado_em")
+        publicados.filter(
+            Q(publicado_em__gt=post.publicado_em)
+            | mesma_data & Q(pk__gt=post.pk)
+        )
+        .order_by("publicado_em", "pk")
         .first()
     )
     return render(
@@ -299,10 +310,11 @@ def _pagina_post(
 
 
 def _voltar_para(request: HttpRequest) -> str:
-    """Retorna o caminho de volta enviado pelo formulário, se for seguro.
+    r"""Retorna o caminho de volta enviado pelo formulário, se for seguro.
 
-    Só aceita caminhos internos (começando com uma ``/``), para o campo
-    ``next`` não virar um redirecionamento para outro site.
+    Só aceita endereços deste site, para o campo ``next`` não virar um
+    redirecionamento para outro. A checagem do Django cobre truques como
+    ``//site`` e ``/\site``, que o navegador trata como outro domínio.
 
     Args:
         request: requisição atual.
@@ -313,8 +325,10 @@ def _voltar_para(request: HttpRequest) -> str:
     English:
         Returns the way-back path sent by the form, if it is safe.
 
-        Only internal paths (starting with a single ``/``) are accepted,
-        so the ``next`` field cannot become a redirect to another site.
+        Only addresses on this site are accepted, so the ``next`` field
+        cannot become a redirect to another one. Django's check covers
+        tricks like ``//site`` and ``/\site``, which the browser treats as
+        another domain.
 
         Args:
             request: current request.
@@ -323,6 +337,10 @@ def _voltar_para(request: HttpRequest) -> str:
             The given path, or ``/``.
     """
     destino = request.POST.get("next", "")
-    if destino.startswith("/") and not destino.startswith("//"):
+    if url_has_allowed_host_and_scheme(
+        destino,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
         return destino
     return "/"

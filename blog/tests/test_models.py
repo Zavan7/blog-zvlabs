@@ -215,10 +215,20 @@ class IndiceTests(TestCase):
         self.assertEqual(
             indice_markdown(texto),
             [
-                ItemIndice("o-problema", "O problema"),
-                ItemIndice("a-correcao", "A correção"),
+                ItemIndice("secao-o-problema", "O problema"),
+                ItemIndice("secao-a-correcao", "A correção"),
             ],
         )
+
+    def test_ancora_nao_repete_id_da_pagina(self):
+        """``## Comentários`` não ganha o id da seção de comentários.
+
+        English:
+            ``## Comentários`` does not get the comments section id.
+        """
+        html = renderizar_markdown("## Comentários")
+        self.assertIn('id="secao-comentarios"', html)
+        self.assertNotIn('id="comentarios"', html)
 
     def test_ancora_igual_a_do_html(self):
         """A âncora do índice é o id do ``<h2>`` renderizado.

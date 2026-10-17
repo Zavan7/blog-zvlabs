@@ -284,6 +284,10 @@ def agendar_notificacao(post: Post) -> None:
     Assim o e-mail só sai se o post foi mesmo salvo, e o link do e-mail
     nunca aponta para um post que ainda não existe no banco.
 
+    Com ``robust=True``, uma falha no envio fica no log em vez de virar
+    erro 500 para quem salvou: o post já está gravado, ``notificado_em``
+    volta a vazio e o comando ``notificar_posts`` tenta de novo.
+
     Args:
         post: post recém-salvo.
 
@@ -294,11 +298,16 @@ def agendar_notificacao(post: Post) -> None:
         This way the e-mail only goes out if the post was really saved, and
         the e-mail link never points to a post not yet in the database.
 
+        With ``robust=True``, a sending failure goes to the log instead of
+        becoming a 500 error for whoever saved: the post is already stored,
+        ``notificado_em`` goes back to empty and the ``notificar_posts``
+        command tries again.
+
         Args:
             post: freshly saved post.
     """
     if post.esta_publicado and post.notificado_em is None:
-        transaction.on_commit(lambda: notificar_inscritos(post))
+        transaction.on_commit(lambda: notificar_inscritos(post), robust=True)
 
 
 def notificar_pendentes() -> int:

@@ -22,8 +22,40 @@ import markdown as md
 import nh3
 from django.utils.html import escape
 from django.utils.safestring import SafeString, mark_safe
+from markdown.extensions.toc import slugify
 
 EXTENSOES = ["extra", "sane_lists", "toc"]
+
+# Os ids dos subtítulos levam um prefixo para não repetir ids da página
+# (``#comentarios``, ``#posts``, ``#conteudo``) quando o post tem um
+# ``## Comentários``, por exemplo.
+PREFIXO_ANCORA = "secao-"
+
+
+def _ancora(valor: str, separador: str) -> str:
+    """Gera o id de um subtítulo: o slug padrão do ``toc`` com prefixo.
+
+    Args:
+        valor: texto do subtítulo.
+        separador: separador de palavras do ``toc``.
+
+    Returns:
+        O id, por exemplo ``secao-o-problema``.
+
+    English:
+        Builds a heading id: the ``toc`` default slug with a prefix.
+
+        Args:
+            valor: heading text.
+            separador: ``toc`` word separator.
+
+        Returns:
+            The id, for example ``secao-o-problema``.
+    """
+    return PREFIXO_ANCORA + slugify(valor, separador)
+
+
+CONFIG_EXTENSOES = {"toc": {"slugify": _ancora}}
 
 TAGS_PERMITIDAS = {
     "a", "abbr", "blockquote", "br", "code", "dd", "del", "div", "dl",
@@ -85,7 +117,9 @@ def renderizar_markdown(texto: str) -> SafeString:
         Returns:
             Sanitized HTML marked as safe for the template.
     """
-    html = md.markdown(texto, extensions=EXTENSOES)
+    html = md.markdown(
+        texto, extensions=EXTENSOES, extension_configs=CONFIG_EXTENSOES
+    )
     limpo = nh3.clean(
         html,
         tags=TAGS_PERMITIDAS,
@@ -122,7 +156,9 @@ def indice_markdown(texto: str) -> list[ItemIndice]:
         Returns:
             Anchor and title of each level-2 heading.
     """
-    conversor = md.Markdown(extensions=EXTENSOES)
+    conversor = md.Markdown(
+        extensions=EXTENSOES, extension_configs=CONFIG_EXTENSOES
+    )
     conversor.convert(texto)
     tokens: list[dict[str, Any]] = getattr(conversor, "toc_tokens", [])
     return _titulos_nivel_2(tokens)
@@ -186,7 +222,7 @@ def _moldurar_codigo(achado: re.Match[str]) -> str:
     linhas = achado["codigo"].removesuffix("\n").split("\n")
     corpo = "".join(f'<span class="l">{linha}</span>' for linha in linhas)
     return (
-        '<figure class="codigo" style="margin-inline:0">'
+        '<figure class="codigo">'
         f'<figcaption class="codigo-topo"><span>{rotulo}</span>'
         '<button class="codigo-copiar" type="button" data-copiar hidden>'
         "Copiar</button></figcaption>"
