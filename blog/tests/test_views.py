@@ -5,10 +5,12 @@ English:
 """
 
 import uuid
+from datetime import timedelta
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from blog.models import Assunto, Comentario, Inscrito, Post
 from blog.tests.base import (
@@ -181,6 +183,149 @@ class DetalheTests(TestCase):
         self.client.force_login(self.leitor)
         resposta = self.client.get(self.post.get_absolute_url())
         self.assertContains(resposta, 'name="texto"')
+
+    def test_deslogado_ve_convite_de_inscricao(self):
+        """Deslogado vê os botões de login social no fim do post.
+
+        English:
+            A logged-out visitor sees the social login buttons after the
+            post.
+        """
+        resposta = self.client.get(self.post.get_absolute_url())
+        self.assertContains(resposta, "Inscrever com GitHub")
+        self.assertContains(resposta, "Entrar com Google")
+
+    def test_inscrito_nao_ve_convite_de_inscricao(self):
+        """Quem já é inscrito não vê o convite no fim do post.
+
+        English:
+            An existing subscriber does not see the invitation after the
+            post.
+        """
+        inscrever(self.leitor)
+        self.client.force_login(self.leitor)
+        resposta = self.client.get(self.post.get_absolute_url())
+        self.assertNotContains(resposta, "Receba o próximo por e-mail")
+        self.assertContains(resposta, "Cancelar inscrição")
+
+    def test_mostra_indice_e_leitura(self):
+        """Post com ``##`` mostra o índice e o tempo de leitura.
+
+        English:
+            A post with ``##`` shows the index and the reading time.
+        """
+        post = criar_post(
+            self.autor, slug="com-indice", conteudo="## O problema\n\nTexto."
+        )
+        resposta = self.client.get(post.get_absolute_url())
+        self.assertContains(
+            resposta,
+            '<a class="indice-link" href="#o-problema">O problema</a>',
+            html=True,
+        )
+        self.assertContains(resposta, "1 min")
+
+    @override_settings(PORTFOLIO_URL="")
+    def test_sem_portfolio_esconde_link(self):
+        """Sem ``PORTFOLIO_URL``, o link do portfólio some.
+
+        English:
+            Without ``PORTFOLIO_URL``, the portfolio link is hidden.
+        """
+        resposta = self.client.get(self.post.get_absolute_url())
+        self.assertNotContains(resposta, "Voltar ao portfólio")
+
+    @override_settings(PORTFOLIO_URL="https://zvlabs.com.br/")
+    def test_com_portfolio_mostra_link(self):
+        """Com ``PORTFOLIO_URL``, menu e rodapé apontam para ele.
+
+        English:
+            With ``PORTFOLIO_URL``, menu and footer point to it.
+        """
+        resposta = self.client.get(self.post.get_absolute_url())
+        self.assertContains(resposta, 'href="https://zvlabs.com.br/"', count=2)
+
+
+class VizinhosTests(TestCase):
+    """Navegação para o post anterior e o próximo.
+
+    English:
+        Navigation to the previous and next posts.
+    """
+
+    autor: User
+    antigo: Post
+    meio: Post
+    novo: Post
+
+    @classmethod
+    def setUpTestData(cls):
+        """Cria três posts publicados, um rascunho e um agendado.
+
+        English:
+            Creates three published posts, a draft and a scheduled one.
+        """
+        cls.autor = criar_usuario("vitor", superuser=True)
+        agora = timezone.now()
+        cls.antigo = criar_post(
+            cls.autor,
+            slug="antigo",
+            titulo="Post antigo",
+            publicado_em=agora - timedelta(days=3),
+        )
+        cls.meio = criar_post(
+            cls.autor,
+            slug="meio",
+            titulo="Post do meio",
+            publicado_em=agora - timedelta(days=2),
+        )
+        cls.novo = criar_post(
+            cls.autor,
+            slug="novo",
+            titulo="Post novo",
+            publicado_em=agora - timedelta(days=1),
+        )
+        criar_post(
+            cls.autor, slug="rascunho", titulo="Rascunho", publicado=False
+        )
+        criar_post(
+            cls.autor,
+            slug="agendado",
+            titulo="Agendado",
+            status=Post.Status.PUBLICADO,
+            publicado_em=agora + timedelta(days=1),
+        )
+
+    def test_meio_tem_anterior_e_proximo(self):
+        """O post do meio aponta para os dois vizinhos.
+
+        English:
+            The middle post points to both neighbours.
+        """
+        resposta = self.client.get(self.meio.get_absolute_url())
+        self.assertEqual(resposta.context["anterior"], self.antigo)
+        self.assertEqual(resposta.context["proximo"], self.novo)
+
+    def test_mais_novo_ignora_agendado_e_rascunho(self):
+        """Agendado e rascunho nunca viram "próximo post".
+
+        English:
+            Scheduled and draft posts never become the "next post".
+        """
+        resposta = self.client.get(self.novo.get_absolute_url())
+        self.assertEqual(resposta.context["anterior"], self.meio)
+        self.assertIsNone(resposta.context["proximo"])
+        self.assertNotContains(resposta, "Agendado")
+
+    def test_mais_antigo_nao_tem_anterior(self):
+        """O primeiro post não tem anterior.
+
+        English:
+            The first post has no previous one.
+        """
+        resposta = self.client.get(self.antigo.get_absolute_url())
+        self.assertIsNone(resposta.context["anterior"])
+        self.assertNotContains(resposta, "Post anterior")
 
 
 class ComentarTests(TestCase):

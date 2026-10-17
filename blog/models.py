@@ -12,7 +12,10 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.safestring import SafeString
 
-from blog.texto import renderizar_markdown
+from blog.texto import ItemIndice, indice_markdown, renderizar_markdown
+
+# Ritmo médio de leitura usado no "min de leitura".
+PALAVRAS_POR_MINUTO = 200
 
 
 class Assunto(models.Model):
@@ -175,6 +178,25 @@ class Post(models.Model):
             Returns the content converted from Markdown to safe HTML.
         """
         return renderizar_markdown(self.conteudo)
+
+    @property
+    def indice(self) -> list[ItemIndice]:
+        """Retorna os subtítulos ``##`` do post, para o índice lateral.
+
+        English:
+            Returns the post's ``##`` headings, for the side index.
+        """
+        return indice_markdown(self.conteudo)
+
+    @property
+    def minutos_leitura(self) -> int:
+        """Estima o tempo de leitura em minutos (no mínimo 1).
+
+        English:
+            Estimates the reading time in minutes (at least 1).
+        """
+        palavras = len(self.conteudo.split())
+        return max(1, round(palavras / PALAVRAS_POR_MINUTO))
 
 
 class Comentario(models.Model):

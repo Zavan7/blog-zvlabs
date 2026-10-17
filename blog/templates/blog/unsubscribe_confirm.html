@@ -3,17 +3,19 @@
 Cancelar inscrição · Blog ZV Labs
 {% endblock head_title %}
 {% block content %}
-<section class="caixa">
-  <h1>Cancelar inscrição</h1>
-  {% if inscrito.ativo %}
-  <p>Parar de enviar os posts novos para <strong>{{ inscrito.usuario.email }}</strong>?</p>
-  <form method="post">
-    {% csrf_token %}
-    <button type="submit" class="botao">Cancelar inscrição</button>
-  </form>
-  {% else %}
-  <p>Esta inscrição já está cancelada. Nenhum e-mail novo será enviado.</p>
-  {% endif %}
-  <p><a href="{% url 'post_list' %}">Voltar ao blog</a></p>
+<section class="artigo-topo colunas" aria-labelledby="titulo-cancelar">
+  <div class="coluna-margem"><a class="voltar" href="{% url 'post_list' %}">Voltar ao blog</a></div>
+  <div class="coluna-principal">
+    <h1 id="titulo-cancelar" class="manchete">Cancelar inscrição</h1>
+    {% if inscrito.ativo %}
+    <p class="subtitulo">Parar de enviar os posts novos para <strong>{{ inscrito.usuario.email }}</strong>?</p>
+    <form class="inscricao-post" method="post">
+      {% csrf_token %}
+      <button class="botao" type="submit">Cancelar inscrição</button>
+    </form>
+    {% else %}
+    <p class="subtitulo">Esta inscrição já está cancelada. Nenhum e-mail novo será enviado.</p>
+    {% endif %}
+  </div>
 </section>
 {% endblock content %}

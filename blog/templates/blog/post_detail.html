@@ -1,45 +1,149 @@
 {% extends "base.html" %}
+{% load socialaccount %}
 {% block head_title %}
 {{ post.titulo }} · Blog ZV Labs
 {% endblock head_title %}
+{% block progresso %}
+<div class="progresso" aria-hidden="true"></div>
+{% endblock progresso %}
 {% block content %}
-<article class="post">
-  <a class="voltar" href="{% url 'post_list' %}">← Todos os posts</a>
-  <header>
-    <time datetime="{{ post.publicado_em|date:'c' }}">{{ post.publicado_em|date:"d \d\e F \d\e Y" }}</time>
-    <h1>{{ post.titulo }}</h1>
-    <p class="resumo">{{ post.resumo }}</p>
-    <ul class="assuntos">
-      {% for assunto in post.assuntos.all %}
-      <li><a href="{% url 'post_list' %}?assunto={{ assunto.slug }}">{{ assunto.nome }}</a></li>
-      {% endfor %}
-    </ul>
+<article>
+  <header class="artigo-topo colunas">
+    <div class="coluna-margem"><a class="voltar" href="{% url 'post_list' %}#posts">Todos os posts</a></div>
+    <div class="coluna-principal">
+      <h1 class="manchete">{{ post.titulo }}</h1>
+      <p class="subtitulo">{{ post.resumo }}</p>
+    </div>
   </header>
-  <div class="texto-post">
-    {{ post.conteudo_html }}
+
+  <div class="corpo colunas">
+    <div class="margem-fixa coluna-margem">
+      <dl class="ficha">
+        <div class="ficha-item"><dt class="ficha-nome">Autor</dt><dd class="ficha-valor">{{ post.autor.get_full_name|default:post.autor.username }}</dd></div>
+        <div class="ficha-item"><dt class="ficha-nome">Publicado em</dt><dd class="ficha-valor"><time datetime="{{ post.publicado_em|date:'Y-m-d' }}">{{ post.publicado_em|date:"j b Y" }}</time></dd></div>
+        <div class="ficha-item"><dt class="ficha-nome">Leitura</dt><dd class="ficha-valor">{{ post.minutos_leitura }} min</dd></div>
+        {% with assuntos=post.assuntos.all %}
+        {% if assuntos %}
+        <div class="ficha-item"><dt class="ficha-nome">Assuntos</dt><dd class="ficha-valor">{{ assuntos|join:", " }}</dd></div>
+        {% endif %}
+        {% endwith %}
+      </dl>
+      {% with indice=post.indice %}
+      {% if indice %}
+      <nav class="indice" aria-label="Neste post">
+        <p class="indice-titulo">Neste post</p>
+        <ul class="indice-lista">
+          {% for item in indice %}
+          <li><a class="indice-link" href="#{{ item.ancora }}">{{ item.titulo }}</a></li>
+          {% endfor %}
+        </ul>
+      </nav>
+      {% endif %}
+      {% endwith %}
+    </div>
+
+    <div class="texto coluna-principal">
+      {{ post.conteudo_html }}
+
+      {% if not inscricao_ativa %}
+      <form class="inscricao-post" method="post" action="{% url 'subscribe' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <h2 class="inscricao-titulo">Gostou? Receba o próximo por e-mail.</h2>
+        <p class="inscricao-texto">Entre com sua conta e pronto, sem senha.</p>
+        <div class="assina-botoes">
+          {% if user.is_authenticated %}
+          <button class="botao" type="submit">Inscrever</button>
+          {% else %}
+          <button class="botao" type="submit" formaction="{% provider_login_url 'github' next=request.get_full_path %}">Inscrever com GitHub</button>
+          <button class="botao" type="submit" formaction="{% provider_login_url 'google' next=request.get_full_path %}">Inscrever com Google</button>
+          {% endif %}
+        </div>
+        <p class="nota">Guardamos só seu nome e e-mail. Todo e-mail traz um link para cancelar.</p>
+      </form>
+      {% endif %}
+    </div>
   </div>
-</article>
 
-<section class="comentarios" id="comentarios">
-  <h2>Comentários</h2>
-  {% for comentario in comentarios %}
-  <article class="comentario">
-    <p class="autor">{{ comentario.autor.get_full_name|default:comentario.autor.username }} · <time datetime="{{ comentario.criado_em|date:'c' }}">{{ comentario.criado_em|date:"d/m/Y" }}</time></p>
-    <p>{{ comentario.texto|linebreaksbr }}</p>
-  </article>
-  {% empty %}
-  <p class="vazio">Nenhum comentário ainda.</p>
-  {% endfor %}
-
-  {% if user.is_authenticated %}
-  <form method="post" action="{% url 'comment_create' post.slug %}" class="form-comentario">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <p class="aviso">Os comentários aparecem depois de aprovados.</p>
-    <button type="submit" class="botao">Enviar comentário</button>
-  </form>
-  {% else %}
-  <p class="aviso">Entre pelo botão "Inscrever-se" no topo para comentar.</p>
+  {% if anterior or proximo %}
+  <nav class="vizinhos colunas" aria-label="Outros posts">
+    <div class="coluna-principal vizinhos-grade">
+      {% if anterior %}
+      <a class="vizinho" href="{{ anterior.get_absolute_url }}">
+        <span class="vizinho-rotulo">Post anterior</span>
+        <span class="vizinho-titulo">{{ anterior.titulo }}</span>
+      </a>
+      {% else %}
+      <span></span>
+      {% endif %}
+      {% if proximo %}
+      <a class="vizinho vizinho-prox" href="{{ proximo.get_absolute_url }}">
+        <span class="vizinho-rotulo">Próximo post</span>
+        <span class="vizinho-titulo">{{ proximo.titulo }}</span>
+      </a>
+      {% endif %}
+    </div>
+  </nav>
   {% endif %}
-</section>
+
+  <section class="conversa colunas" id="comentarios" aria-labelledby="titulo-conversa">
+    <div class="coluna-principal">
+      <h2 id="titulo-conversa" class="conversa-titulo">Comentários ({{ comentarios|length }})</h2>
+
+      {% for comentario in comentarios %}
+      {% with nome=comentario.autor.get_full_name|default:comentario.autor.username conta=comentario.autor.socialaccount_set.all.0 %}
+      <div class="comentario">
+        <div class="avatar" aria-hidden="true">{{ nome|first|upper }}</div>
+        <div>
+          <div class="comentario-autor">
+            <span class="comentario-nome">{{ nome }}</span>
+            <span class="comentario-meta">
+              {% if conta.provider == "github" %}
+              GitHub,
+              {% elif conta.provider == "google" %}
+              Google,
+              {% endif %}
+              <time datetime="{{ comentario.criado_em|date:'Y-m-d' }}">{{ comentario.criado_em|date:"j b Y" }}</time>
+            </span>
+          </div>
+          <p class="comentario-texto">{{ comentario.texto|linebreaksbr }}</p>
+        </div>
+      </div>
+      {% endwith %}
+      {% endfor %}
+
+      {% if user.is_authenticated %}
+      <form class="entrar" method="post" action="{% url 'comment_create' post.slug %}">
+        {% csrf_token %}
+        <h3 class="inscricao-titulo">Deixe um comentário</h3>
+        <p class="inscricao-texto">Seu nome aparece junto ao comentário. Seu e-mail não.</p>
+        {% if form.texto.errors %}
+        <ul class="erros">
+          {% for erro in form.texto.errors %}
+          <li>{{ erro }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        <label class="campo-rotulo" for="{{ form.texto.id_for_label }}">{{ form.texto.label }}</label>
+        {{ form.texto }}
+        <div class="assina-botoes">
+          <button class="botao" type="submit">Enviar comentário</button>
+        </div>
+        <p class="nota">Os comentários passam por moderação antes de aparecer.</p>
+      </form>
+      {% else %}
+      <form class="entrar" method="post">
+        {% csrf_token %}
+        <h3 class="inscricao-titulo">Entre para comentar</h3>
+        <p class="inscricao-texto">Seu nome aparece junto ao comentário. Seu e-mail não.</p>
+        <div class="assina-botoes">
+          <button class="botao" type="submit" formaction="{% provider_login_url 'github' next=post.get_absolute_url %}">Entrar com GitHub</button>
+          <button class="botao" type="submit" formaction="{% provider_login_url 'google' next=post.get_absolute_url %}">Entrar com Google</button>
+        </div>
+        <p class="nota">Os comentários passam por moderação antes de aparecer.</p>
+      </form>
+      {% endif %}
+    </div>
+  </section>
+</article>
 {% endblock content %}

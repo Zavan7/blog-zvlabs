@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from blog.models import Post
 from blog.tests.base import criar_post, criar_usuario
-from blog.texto import renderizar_markdown
+from blog.texto import ItemIndice, indice_markdown, renderizar_markdown
 
 
 class PostTests(TestCase):
@@ -84,6 +84,43 @@ class PostTests(TestCase):
         self.assertIn("<strong>forte</strong>", post.conteudo_html)
 
 
+class LeituraTests(TestCase):
+    """Estimativa de tempo de leitura.
+
+    English:
+        Reading time estimate.
+    """
+
+    autor: User
+
+    @classmethod
+    def setUpTestData(cls):
+        """Cria o autor.
+
+        English:
+            Creates the author.
+        """
+        cls.autor = criar_usuario("vitor", superuser=True)
+
+    def test_texto_curto_conta_um_minuto(self):
+        """Nunca mostra zero minuto.
+
+        English:
+            Never shows zero minutes.
+        """
+        post = criar_post(self.autor, conteudo="Oi.")
+        self.assertEqual(post.minutos_leitura, 1)
+
+    def test_conta_pelas_palavras(self):
+        """600 palavras a 200 por minuto dão 3 minutos.
+
+        English:
+            600 words at 200 per minute give 3 minutes.
+        """
+        post = criar_post(self.autor, conteudo="palavra " * 600)
+        self.assertEqual(post.minutos_leitura, 3)
+
+
 class MarkdownTests(TestCase):
     """Sanitização do HTML gerado.
 
@@ -128,10 +165,76 @@ class MarkdownTests(TestCase):
         self.assertIn('rel="noopener noreferrer"', html)
 
     def test_bloco_de_codigo(self):
-        """Bloco cercado vira <pre><code>.
+        """Bloco cercado ganha moldura, linguagem e uma linha por span.
 
         English:
-            Fenced block becomes <pre><code>.
+            Fenced block gets a frame, the language and one span per line.
         """
-        html = renderizar_markdown("```python\nprint('oi')\n```")
-        self.assertIn("<pre><code", html)
+        html = renderizar_markdown("```python\na = 1\nb = 2\n```")
+        self.assertIn('<figure class="codigo"', html)
+        self.assertIn("<span>python</span>", html)
+        self.assertIn("data-copiar", html)
+        self.assertIn(
+            '<span class="l">a = 1</span><span class="l">b = 2</span>', html
+        )
+
+    def test_bloco_sem_linguagem(self):
+        """Bloco sem linguagem mostra o rótulo "código".
+
+        English:
+            A block without a language shows the "código" label.
+        """
+        html = renderizar_markdown("    x = 1")
+        self.assertIn("<span>código</span>", html)
+
+    def test_codigo_continua_escapado(self):
+        """HTML dentro do bloco de código continua como texto.
+
+        English:
+            HTML inside a code block stays as text.
+        """
+        html = renderizar_markdown("```html\n<script>alert(1)</script>\n```")
+        self.assertNotIn("<script", html)
+        self.assertIn("&lt;script&gt;", html)
+
+
+class IndiceTests(TestCase):
+    """Índice "Neste post" a partir dos subtítulos.
+
+    English:
+        "In this post" index built from the headings.
+    """
+
+    def test_lista_so_subtitulos_de_nivel_2(self):
+        """``#`` e ``###`` ficam fora; ``##`` entra na ordem do texto.
+
+        English:
+            ``#`` and ``###`` stay out; ``##`` comes in text order.
+        """
+        texto = "# Título\n\n## O problema\n\n### Detalhe\n\n## A correção"
+        self.assertEqual(
+            indice_markdown(texto),
+            [
+                ItemIndice("o-problema", "O problema"),
+                ItemIndice("a-correcao", "A correção"),
+            ],
+        )
+
+    def test_ancora_igual_a_do_html(self):
+        """A âncora do índice é o id do ``<h2>`` renderizado.
+
+        English:
+            The index anchor is the id of the rendered ``<h2>``.
+        """
+        texto = "## Celery & on_commit"
+        (item,) = indice_markdown(texto)
+        self.assertEqual(item.titulo, "Celery & on_commit")
+        self.assertIn(f'id="{item.ancora}"', renderizar_markdown(texto))
+
+    def test_sem_subtitulos(self):
+        """Texto sem ``##`` não gera índice.
+
+        English:
+            Text without ``##`` yields no index.
+        """
+        self.assertEqual(indice_markdown("Só um parágrafo."), [])

@@ -7,35 +7,51 @@ Blog ZV Labs
 {% endif %}
 {% endblock head_title %}
 {% block content %}
-<nav class="filtro" aria-label="Filtrar por assunto">
-  {% if assunto_atual %}
-  <a href="{% url 'post_list' %}" class="etiqueta">Todos</a>
-  {% else %}
-  <a href="{% url 'post_list' %}" class="etiqueta ativa" aria-current="page">Todos</a>
-  {% endif %}
-  {% for assunto in assuntos %}
-  {% if assunto == assunto_atual %}
-  <a href="{% url 'post_list' %}?assunto={{ assunto.slug }}" class="etiqueta ativa" aria-current="page">{{ assunto.nome }}</a>
-  {% else %}
-  <a href="{% url 'post_list' %}?assunto={{ assunto.slug }}" class="etiqueta">{{ assunto.nome }}</a>
-  {% endif %}
-  {% endfor %}
-</nav>
+<section class="capa colunas" aria-labelledby="titulo-capa">
+  <div class="coluna-principal">
+    <h1 id="titulo-capa" class="chamada">Automação, Python e Django na prática.</h1>
+    <p class="apoio">Anotações de quem constrói o Maestro, um orquestrador de robôs RPA: o que funcionou, o que quebrou e por quê.</p>
+  </div>
+</section>
 
-<section class="lista-posts">
+<section class="lista" id="posts" aria-labelledby="titulo-lista">
+  <div class="lista-topo colunas">
+    <h2 id="titulo-lista" class="lista-rotulo coluna-margem">Posts</h2>
+    <div class="lista-barra coluna-principal">
+      <ul class="filtros" aria-label="Filtrar por assunto">
+        {% if assunto_atual %}
+        <li><a class="filtro" href="{% url 'post_list' %}#posts">Todos</a></li>
+        {% else %}
+        <li><a class="filtro" href="{% url 'post_list' %}#posts" aria-current="page">Todos</a></li>
+        {% endif %}
+        {% for assunto in assuntos %}
+        {% if assunto == assunto_atual %}
+        <li><a class="filtro" href="{% url 'post_list' %}?assunto={{ assunto.slug }}#posts" aria-current="page">{{ assunto.nome }}</a></li>
+        {% else %}
+        <li><a class="filtro" href="{% url 'post_list' %}?assunto={{ assunto.slug }}#posts">{{ assunto.nome }}</a></li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+      <p class="lista-conta">{{ posts|length }} post{{ posts|length|pluralize }}</p>
+    </div>
+  </div>
+
   {% for post in posts %}
-  <article class="cartao-post">
-    <time datetime="{{ post.publicado_em|date:'c' }}">{{ post.publicado_em|date:"d \d\e F \d\e Y" }}</time>
-    <h2><a href="{{ post.get_absolute_url }}">{{ post.titulo }}</a></h2>
-    <p>{{ post.resumo }}</p>
-    <ul class="assuntos">
-      {% for assunto in post.assuntos.all %}
-      <li><a href="{% url 'post_list' %}?assunto={{ assunto.slug }}">{{ assunto.nome }}</a></li>
-      {% endfor %}
-    </ul>
+  {% if forloop.first %}
+  <article class="post post-destaque colunas">
+  {% else %}
+  <article class="post colunas">
+  {% endif %}
+    <p class="post-meta coluna-margem"><time datetime="{{ post.publicado_em|date:'Y-m-d' }}">{{ post.publicado_em|date:"j b Y" }}</time><br>{{ post.minutos_leitura }} min de leitura<br>{{ post.assuntos.all|join:", " }}</p>
+    <div class="coluna-principal">
+      <h3 class="post-titulo"><a class="post-link" href="{{ post.get_absolute_url }}">{{ post.titulo }}</a></h3>
+      <p class="post-resumo">{{ post.resumo }}</p>
+    </div>
   </article>
   {% empty %}
-  <p class="vazio">Nenhum post publicado ainda.</p>
+  <div class="colunas">
+    <p class="vazio coluna-principal">Nenhum post publicado ainda.</p>
+  </div>
   {% endfor %}
 </section>
 {% endblock content %}

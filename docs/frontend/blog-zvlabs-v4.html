@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Blog ZV Labs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+/* =====================================================================
+   Blog ZV Labs, versão 3.
+   Uma coluna de leitura e uma margem esquerda que guarda os metadados
+   (data, leitura, assuntos) e, no post, o índice. Neutros frios, um só
+   acento, títulos grandes e apertados.
+   Para o Django: copie este bloco para static/blog/blog.css.
+   ===================================================================== */
+
+/* ---------- Tokens ---------- */
+:root {
+  --bg: #ffffff;
+  --painel: #f5f6f8;
+  --tinta: #101319;
+  --suave: #5d6573;
+  --linha: #e4e7ec;
+  --acento: #1f4fff;
+  --sobre-acento: #ffffff;
+  --verde: #0e7a50;
+
+  --largura: 1040px;
+  --margem-esq: 168px;
+  --respiro: 40px;
+
+  --sans: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+:root[data-tema="noite"] {
+  --bg: #0b0d12;
+  --painel: #13161d;
+  --tinta: #eceef3;
+  --suave: #9aa2b1;
+  --linha: #232834;
+  --acento: #86a6ff;
+  --sobre-acento: #0b0d12;
+  --verde: #7fd6a9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="dia"]) {
+    --bg: #0b0d12;
+    --painel: #13161d;
+    --tinta: #eceef3;
+    --suave: #9aa2b1;
+    --linha: #232834;
+    --acento: #86a6ff;
+    --sobre-acento: #0b0d12;
+    --verde: #7fd6a9;
+  }
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--tinta);
+  font: 17px/1.65 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+[hidden] { display: none !important; }
+
+::selection { background: color-mix(in srgb, var(--acento) 24%, transparent); }
+
+a { color: inherit; }
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+.pular {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 10;
+  padding: 12px 16px;
+  background: var(--tinta);
+  color: var(--bg);
+  border-radius: 8px;
+  font-weight: 500;
+}
+.pular:focus { left: 8px; }
+
+.miolo {
+  max-width: var(--largura);
+  margin: 0 auto;
+  padding-inline: 24px;
+}
+
+/* Duas colunas: margem de metadados e coluna principal */
+.colunas {
+  display: grid;
+  grid-template-columns: var(--margem-esq) minmax(0, 1fr);
+  column-gap: var(--respiro);
+}
+.coluna-principal { grid-column: 2; min-width: 0; }
+.coluna-margem { grid-column: 1; min-width: 0; }
+
+/* ---------- Barra de leitura (só no post, só onde há suporte) ---------- */
+.progresso { display: none; }
+@supports (animation-timeline: scroll()) {
+  .progresso {
+    display: block;
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 5;
+    height: 2px;
+    background: var(--acento);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    animation: avanca linear both;
+    animation-timeline: scroll(root);
+  }
+  @keyframes avanca { to { transform: scaleX(1); } }
+}
+
+/* ---------- Topo ---------- */
+.topo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+}
+
+.marca {
+  padding: 10px 0;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -.02em;
+  text-decoration: none;
+}
+
+.menu { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+
+.menu-link {
+  display: inline-block;
+  padding: 11px 12px;
+  border-radius: 8px;
+  color: var(--suave);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: color .15s, background-color .15s;
+}
+.menu-link:hover { color: var(--tinta); background: var(--painel); }
+
+.botao-tema {
+  min-height: 40px;
+  margin-left: 8px;
+  padding: 0 14px;
+  background: transparent;
+  color: var(--tinta);
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+  font: 500 14px/1 var(--sans);
+  cursor: pointer;
+  transition: background-color .15s;
+}
+.botao-tema:hover { background: var(--painel); }
+
+/* Inscrição no cabeçalho: botão + painel */
+.inscrever { position: relative; margin-left: 8px; }
+
+.inscrever-botao {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 18px;
+  background: var(--tinta);
+  color: var(--bg);
+  border-radius: 999px;
+  font: 500 14px/1 var(--sans);
+  cursor: pointer;
+  list-style: none;
+  transition: background-color .15s, color .15s;
+}
+.inscrever-botao::-webkit-details-marker { display: none; }
+.inscrever-botao:hover,
+.inscrever[open] .inscrever-botao {
+  background: var(--acento);
+  color: var(--sobre-acento);
+}
+
+.inscrever-painel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 20;
+  width: min(360px, calc(100vw - 48px));
+  padding: 24px;
+  background: var(--bg);
+  border: 1px solid var(--linha);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px -16px rgba(16, 19, 25, .22);
+}
+.inscrever-titulo {
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -.02em;
+}
+.inscrever-texto { margin: 0 0 16px; color: var(--suave); font-size: 15px; line-height: 1.5; }
+.inscrever-painel .botao { width: 100%; margin-top: 10px; }
+.inscrever-painel .nota { margin-top: 14px; }
+
+/* ---------- Capa ---------- */
+.capa { padding: 104px 0 88px; }
+
+.chamada {
+  max-width: 14ch;
+  margin: 0 0 28px;
+  font-size: clamp(44px, 6.6vw, 76px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+
+.apoio {
+  max-width: 40ch;
+  margin: 0;
+  color: var(--suave);
+  font-size: 20px;
+  line-height: 1.55;
+}
+
+.assina-botoes { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 22px;
+  background: transparent;
+  color: var(--tinta);
+  border: 1px solid var(--tinta);
+  border-radius: 999px;
+  font: 500 15px/1 var(--sans);
+  cursor: pointer;
+  transition: background-color .15s, color .15s, border-color .15s;
+}
+.botao:hover {
+  background: var(--acento);
+  color: var(--sobre-acento);
+  border-color: var(--acento);
+}
+
+.nota {
+  max-width: 52ch;
+  margin: 14px 0 0;
+  color: var(--suave);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* ---------- Listagem ---------- */
+.lista { padding-bottom: 112px; }
+
+.lista-topo {
+  align-items: center;
+  padding: 12px 0 20px;
+}
+.lista-rotulo {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+.lista-barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+.filtros { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+
+.filtro {
+  min-height: 40px;
+  padding: 0 16px;
+  background: transparent;
+  color: var(--suave);
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+  font: 500 14px/1 var(--sans);
+  cursor: pointer;
+  transition: color .15s, background-color .15s, border-color .15s;
+}
+.filtro:hover { color: var(--tinta); border-color: var(--suave); }
+.filtro[aria-pressed="true"] {
+  background: var(--tinta);
+  color: var(--bg);
+  border-color: var(--tinta);
+}
+
+.lista-conta {
+  margin: 0;
+  color: var(--suave);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.post {
+  position: relative;
+  padding: 32px 0 36px;
+  border-top: 1px solid var(--linha);
+}
+
+.post-meta {
+  margin: 0;
+  color: var(--suave);
+  font-size: 14px;
+  line-height: 1.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.post-titulo {
+  margin: 0 0 10px;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -.025em;
+}
+.post-link { color: inherit; text-decoration: none; transition: color .15s; }
+.post-link::after { content: ""; position: absolute; inset: 0; }
+.post-link:focus-visible { outline: none; }
+.post:hover .post-link { color: var(--acento); }
+.post:focus-within { outline: 2px solid var(--acento); outline-offset: 4px; border-radius: 12px; }
+
+.post-resumo {
+  max-width: 56ch;
+  margin: 0;
+  color: var(--suave);
+}
+
+.post-destaque { padding-top: 40px; padding-bottom: 48px; }
+.post-destaque .post-titulo {
+  max-width: 20ch;
+  margin-bottom: 14px;
+  font-size: clamp(30px, 4.4vw, 44px);
+  line-height: 1.08;
+  letter-spacing: -.04em;
+}
+.post-destaque .post-resumo { font-size: 19px; line-height: 1.6; }
+
+/* ---------- Post ---------- */
+.artigo-topo { padding: 40px 0 64px; }
+
+.voltar {
+  display: inline-block;
+  padding: 10px 0;
+  color: var(--suave);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color .15s;
+}
+.voltar:hover { color: var(--tinta); }
+
+.manchete {
+  max-width: 19ch;
+  margin: 0 0 20px;
+  font-size: clamp(34px, 5.2vw, 58px);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -.045em;
+}
+
+.subtitulo {
+  max-width: 40ch;
+  margin: 0;
+  color: var(--suave);
+  font-size: 21px;
+  line-height: 1.55;
+}
+
+.corpo { padding-bottom: 24px; }
+
+.margem-fixa {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  padding-top: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.ficha { margin: 0; }
+.ficha-item { margin: 0 0 20px; }
+.ficha-nome { margin: 0 0 2px; color: var(--suave); }
+.ficha-valor { margin: 0; font-weight: 500; }
+
+.indice { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--linha); }
+.indice-titulo { margin: 0 0 8px; color: var(--suave); }
+.indice-lista { margin: 0; padding: 0; list-style: none; }
+.indice-link {
+  display: inline-block;
+  padding: 4px 0;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color .15s;
+}
+.indice-link:hover { color: var(--acento); }
+
+.texto { font-size: 18.5px; line-height: 1.75; }
+.texto p { margin: 0 0 24px; }
+.texto-titulo {
+  margin: 56px 0 14px;
+  scroll-margin-top: 24px;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -.03em;
+}
+
+.inline {
+  padding: 2px 6px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 6px;
+  font: 400 .84em/1 var(--mono);
+}
+
+/* Código com numeração por CSS (não entra na seleção) */
+.codigo {
+  margin: 28px 0 32px;
+  overflow: hidden;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+}
+.codigo-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 46px;
+  padding: 0 6px 0 18px;
+  border-bottom: 1px solid var(--linha);
+  color: var(--suave);
+  font: 400 13px/1 var(--mono);
+}
+.codigo-copiar {
+  min-height: 36px;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--tinta);
+  border: 0;
+  border-radius: 8px;
+  font: 500 13.5px/1 var(--sans);
+  cursor: pointer;
+  transition: background-color .15s;
+}
+.codigo-copiar:hover { background: var(--linha); }
+
+.codigo-bloco {
+  margin: 0;
+  padding: 16px 18px 20px;
+  overflow-x: auto;
+  counter-reset: n;
+  color: var(--tinta);
+  font: 400 13.5px/1.8 var(--mono);
+}
+.l { display: block; white-space: pre; counter-increment: n; }
+.l::before {
+  content: counter(n);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 2.5ch;
+  color: var(--suave);
+  text-align: right;
+  user-select: none;
+}
+.k { color: var(--acento); }
+.s { color: var(--verde); }
+.c { color: var(--suave); }
+
+.aviso {
+  margin: 36px 0 0;
+  padding: 20px 22px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+  font-size: 16.5px;
+  line-height: 1.65;
+}
+.aviso-titulo { display: block; margin-bottom: 4px; font-weight: 600; }
+.aviso p { margin: 0; }
+
+.inscricao-post { padding: 56px 0 8px; }
+.inscricao-titulo {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -.025em;
+}
+.inscricao-texto { margin: 0 0 18px; color: var(--suave); }
+
+/* ---------- Anterior e próximo ---------- */
+.vizinhos { padding: 48px 0 0; }
+.vizinhos-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  padding-top: 28px;
+  border-top: 1px solid var(--linha);
+}
+.vizinho { display: block; text-decoration: none; }
+.vizinho-rotulo { display: block; margin-bottom: 4px; color: var(--suave); font-size: 14px; }
+.vizinho-titulo {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -.02em;
+  transition: color .15s;
+}
+.vizinho:hover .vizinho-titulo { color: var(--acento); }
+.vizinho-prox { text-align: right; }
+
+/* ---------- Comentários ---------- */
+.conversa { padding: 64px 0 112px; }
+.conversa-titulo {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+
+.comentario {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 14px;
+  padding: 22px 0;
+  border-top: 1px solid var(--linha);
+}
+.comentario:first-of-type { margin-top: 16px; }
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 50%;
+  font-size: 15px;
+  font-weight: 600;
+}
+.comentario-autor { display: flex; flex-wrap: wrap; gap: 0 12px; align-items: baseline; }
+.comentario-nome { font-weight: 600; }
+.comentario-meta { color: var(--suave); font-size: 14px; }
+.comentario-texto { margin: 4px 0 0; }
+
+.entrar {
+  margin-top: 8px;
+  padding: 24px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 14px;
+}
+.entrar .inscricao-titulo { font-size: 20px; }
+.entrar .inscricao-texto { margin-bottom: 16px; }
+
+/* ---------- Rodapé ---------- */
+.rodape {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  justify-content: space-between;
+  padding: 28px 0 40px;
+  border-top: 1px solid var(--linha);
+  color: var(--suave);
+  font-size: 14px;
+}
+.rodape-link { display: inline-block; padding: 6px 0; }
+
+/* ---------- Duas vistas (só para este protótipo) ---------- */
+body[data-vista="lista"] #vista-post { display: none; }
+body[data-vista="post"]  #vista-lista { display: none; }
+
+/* ---------- Telas estreitas ---------- */
+@media (max-width: 860px) {
+  .colunas { grid-template-columns: minmax(0, 1fr); }
+  .coluna-principal, .coluna-margem { grid-column: 1; }
+  .capa { padding: 64px 0; }
+  .lista-topo { padding-bottom: 12px; }
+  .post { padding: 24px 0 28px; }
+  .post-meta { margin-bottom: 8px; }
+  .margem-fixa {
+    position: static;
+    margin-bottom: 28px;
+    padding: 0 0 8px;
+    border-bottom: 1px solid var(--linha);
+  }
+  .ficha { display: flex; flex-wrap: wrap; gap: 0 28px; }
+  .ficha-item { margin-bottom: 12px; }
+  .indice { display: none; }
+  .texto { font-size: 18px; }
+  .vizinhos-grade { grid-template-columns: minmax(0, 1fr); }
+  .vizinho-prox { text-align: left; }
+}
+
+/* ---------- Painel de inscrição em telas pequenas ---------- */
+@media (max-width: 560px) {
+  .inscrever { position: static; }
+  .inscrever-painel {
+    position: fixed;
+    top: 72px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}
+
+/* ---------- Movimento reduzido ---------- */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+  .progresso { display: none !important; }
+}
+</style>
+</head>
+
+<body data-vista="lista">
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+<div class="progresso" aria-hidden="true" data-progresso></div>
+
+<div class="miolo">
+
+<header class="topo">
+  <a class="marca" href="#">ZV Labs</a>
+  <nav class="menu" aria-label="Principal">
+    <a class="menu-link" href="#posts">Posts</a>
+    <a class="menu-link" href="#portfolio">Portfólio</a>
+    <button class="botao-tema" type="button" data-tema-botao>Tema escuro</button>
+    <details class="inscrever" data-inscrever>
+      <summary class="inscrever-botao">Inscrever</summary>
+      <form class="inscrever-painel" action="#" method="post">
+        <h2 class="inscrever-titulo">Receba cada post novo por e-mail</h2>
+        <p class="inscrever-texto">Entre com sua conta e pronto, sem senha.</p>
+        <button class="botao" type="submit" name="provedor" value="github">Inscrever com GitHub</button>
+        <button class="botao" type="submit" name="provedor" value="google">Inscrever com Google</button>
+        <p class="nota">Guardamos só seu nome e e-mail. Todo e-mail traz um link para cancelar.</p>
+      </form>
+    </details>
+  </nav>
+</header>
+
+<main id="conteudo">
+
+<!-- ===================== VISTA: LISTAGEM ===================== -->
+<div id="vista-lista">
+
+<section class="capa colunas" aria-labelledby="titulo-capa">
+  <div class="coluna-principal">
+    <h1 id="titulo-capa" class="chamada">Automação, Python e Django na prática.</h1>
+    <p class="apoio">Anotações de quem constrói o Maestro, um orquestrador de robôs RPA: o que funcionou, o que quebrou e por quê.</p>
+  </div>
+</section>
+
+<section class="lista" id="posts" aria-labelledby="titulo-lista">
+  <div class="lista-topo colunas">
+    <h2 id="titulo-lista" class="lista-rotulo coluna-margem">Posts</h2>
+    <div class="lista-barra coluna-principal">
+      <ul class="filtros" aria-label="Filtrar por assunto">
+        <li><button class="filtro" type="button" data-filtro="todos" aria-pressed="true">Todos</button></li>
+        <li><button class="filtro" type="button" data-filtro="django" aria-pressed="false">django</button></li>
+        <li><button class="filtro" type="button" data-filtro="rpa" aria-pressed="false">rpa</button></li>
+        <li><button class="filtro" type="button" data-filtro="python" aria-pressed="false">python</button></li>
+        <li><button class="filtro" type="button" data-filtro="maestro" aria-pressed="false">maestro</button></li>
+      </ul>
+      <p class="lista-conta" aria-live="polite" data-conta>5 posts</p>
+    </div>
+  </div>
+
+  <article class="post post-destaque colunas" data-assuntos="rpa python">
+    <p class="post-meta coluna-margem"><time datetime="2026-10-12">12 out 2026</time><br>7 min de leitura<br>rpa, python</p>
+    <div class="coluna-principal">
+      <h3 class="post-titulo"><a class="post-link" href="#post">Idempotência em robôs RPA: rodar duas vezes sem estragar nada</a></h3>
+      <p class="post-resumo">Por que todo robô precisa tolerar uma segunda execução, e três padrões simples para garantir isso sem complicar o código.</p>
+    </div>
+  </article>
+
+  <article class="post colunas" data-assuntos="django celery">
+    <p class="post-meta coluna-margem"><time datetime="2026-10-05">5 out 2026</time><br>6 min de leitura<br>django, celery</p>
+    <div class="coluna-principal">
+      <h3 class="post-titulo"><a class="post-link" href="#post">Celery e on_commit: por que a task não pode sair antes do commit</a></h3>
+      <p class="post-resumo">Uma corrida silenciosa entre o worker e o banco, e a linha de código que resolve.</p>
+    </div>
+  </article>
+
+  <article class="post colunas" data-assuntos="maestro arquitetura">
+    <p class="post-meta coluna-margem"><time datetime="2026-09-28">28 set 2026</time><br>9 min de leitura<br>maestro, arquitetura</p>
+    <div class="coluna-principal">
+      <h3 class="post-titulo"><a class="post-link" href="#post">Do clique ao script: como o Maestro dispara uma execução</a></h3>
+      <p class="post-resumo">O caminho completo de um clique no painel até o robô rodando, passando por view, serviço, fila e worker.</p>
+    </div>
+  </article>
+
+  <article class="post colunas" data-assuntos="rpa playwright">
+    <p class="post-meta coluna-margem"><time datetime="2026-09-19">19 set 2026</time><br>8 min de leitura<br>rpa, playwright</p>
+    <div class="coluna-principal">
+      <h3 class="post-titulo"><a class="post-link" href="#post">Playwright ou Selenium? Critérios para escolher</a></h3>
+      <p class="post-resumo">Esperas, seletores, depuração e manutenção: o que pesa de verdade ao escolher a ferramenta de automação web.</p>
+    </div>
+  </article>
+
+  <article class="post colunas" data-assuntos="django sql">
+    <p class="post-meta coluna-margem"><time datetime="2026-09-10">10 set 2026</time><br>5 min de leitura<br>django, sql</p>
+    <div class="coluna-principal">
+      <h3 class="post-titulo"><a class="post-link" href="#post">SQLite em desenvolvimento, Postgres em produção: o que muda</a></h3>
+      <p class="post-resumo">Diferenças de tipos, de concorrência e de funções de data que aparecem só depois do deploy.</p>
+    </div>
+  </article>
+</section>
+
+</div>
+
+<!-- ===================== VISTA: POST ===================== -->
+<div id="vista-post">
+
+<article>
+  <header class="artigo-topo colunas">
+    <div class="coluna-margem"><a class="voltar" href="#posts">Todos os posts</a></div>
+    <div class="coluna-principal">
+      <h1 class="manchete">Celery e on_commit: por que a task não pode sair antes do commit</h1>
+      <p class="subtitulo">Uma corrida silenciosa entre o worker e o banco, e a linha de código que resolve.</p>
+    </div>
+  </header>
+
+  <div class="corpo colunas">
+    <div class="margem-fixa coluna-margem">
+      <dl class="ficha">
+        <div class="ficha-item"><dt class="ficha-nome">Autor</dt><dd class="ficha-valor">Vitor</dd></div>
+        <div class="ficha-item"><dt class="ficha-nome">Publicado em</dt><dd class="ficha-valor"><time datetime="2026-10-05">5 out 2026</time></dd></div>
+        <div class="ficha-item"><dt class="ficha-nome">Leitura</dt><dd class="ficha-valor">6 min</dd></div>
+        <div class="ficha-item"><dt class="ficha-nome">Assuntos</dt><dd class="ficha-valor">django, celery</dd></div>
+      </dl>
+      <nav class="indice" aria-label="Neste post">
+        <p class="indice-titulo">Neste post</p>
+        <ul class="indice-lista">
+          <li><a class="indice-link" href="#post-o-problema">O problema</a></li>
+          <li><a class="indice-link" href="#post-a-correcao">A correção</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <div class="texto coluna-principal">
+      <p>Quando a view cria um registro e já dispara uma task do Celery, o worker pode receber a mensagem antes de a transação ser confirmada. Na hora de buscar o registro, a task não o encontra. O erro aparece só de vez em quando, o pior tipo.</p>
+
+      <h2 class="texto-titulo" id="post-o-problema">O problema</h2>
+      <p>Repare no envio logo depois do <code class="inline">create</code>:</p>
+
+      <figure class="codigo" style="margin-inline:0">
+        <figcaption class="codigo-topo"><span>robots/views.py</span><button class="codigo-copiar" type="button" data-copiar>Copiar</button></figcaption>
+        <pre class="codigo-bloco"><code><span class="l"><span class="k">def</span> iniciar(request, pk):</span><span class="l">    execucao = Execucao.objects.create(robo_id=pk)</span><span class="l">    rodar_robo.delay(execucao.pk)  <span class="c"># pode sair antes do commit</span></span></code></pre>
+      </figure>
+
+      <p>Se a requisição roda dentro de uma transação, o commit só acontece depois que a view termina. O worker, rápido, chega antes.</p>
+
+      <h2 class="texto-titulo" id="post-a-correcao">A correção</h2>
+      <p>Adie o envio até o commit com <code class="inline">transaction.on_commit</code>. Se não houver transação aberta, a função roda na hora.</p>
+
+      <figure class="codigo" style="margin-inline:0">
+        <figcaption class="codigo-topo"><span>robots/views.py</span><button class="codigo-copiar" type="button" data-copiar>Copiar</button></figcaption>
+        <pre class="codigo-bloco"><code><span class="l"><span class="k">from</span> django.db <span class="k">import</span> transaction</span><span class="l"></span><span class="l"></span><span class="l"><span class="k">def</span> iniciar(request, pk):</span><span class="l">    execucao = Execucao.objects.create(robo_id=pk)</span><span class="l">    transaction.on_commit(<span class="k">lambda</span>: rodar_robo.delay(execucao.pk))</span></code></pre>
+      </figure>
+
+      <p>A task recebe apenas o id e busca o registro de novo quando roda. Assim ela sempre enxerga o estado já confirmado no banco.</p>
+
+      <aside class="aviso">
+        <span class="aviso-titulo">Nos testes</span>
+        <p>Dentro de um <code class="inline">TestCase</code>, os callbacks de <code class="inline">on_commit</code> não rodam sozinhos. Use <code class="inline">captureOnCommitCallbacks(execute=True)</code> para vê-los executar.</p>
+      </aside>
+
+      <form class="inscricao-post" action="#" method="post">
+        <h2 class="inscricao-titulo">Gostou? Receba o próximo por e-mail.</h2>
+        <p class="inscricao-texto">Entre com sua conta e pronto, sem senha.</p>
+        <div class="assina-botoes">
+          <button class="botao" type="submit" name="provedor" value="github">Inscrever com GitHub</button>
+          <button class="botao" type="submit" name="provedor" value="google">Inscrever com Google</button>
+        </div>
+        <p class="nota">Guardamos só seu nome e e-mail. Todo e-mail traz um link para cancelar.</p>
+      </form>
+    </div>
+  </div>
+
+  <nav class="vizinhos colunas" aria-label="Outros posts">
+    <div class="coluna-principal vizinhos-grade">
+      <a class="vizinho" href="#post">
+        <span class="vizinho-rotulo">Post anterior</span>
+        <span class="vizinho-titulo">Do clique ao script: como o Maestro dispara uma execução</span>
+      </a>
+      <a class="vizinho vizinho-prox" href="#post">
+        <span class="vizinho-rotulo">Próximo post</span>
+        <span class="vizinho-titulo">Idempotência em robôs RPA: rodar duas vezes sem estragar nada</span>
+      </a>
+    </div>
+  </nav>
+
+  <section class="conversa colunas" aria-labelledby="titulo-conversa">
+    <div class="coluna-principal">
+      <h2 id="titulo-conversa" class="conversa-titulo">Comentários (2)</h2>
+
+      <div class="comentario">
+        <div class="avatar" aria-hidden="true">M</div>
+        <div>
+          <div class="comentario-autor"><span class="comentario-nome">Marina S.</span><span class="comentario-meta">GitHub, 6 out 2026</span></div>
+          <p class="comentario-texto">Já caí exatamente nesse erro com um robô que lia a fila antes do commit. Levei uma tarde para entender.</p>
+        </div>
+      </div>
+
+      <div class="comentario">
+        <div class="avatar" aria-hidden="true">D</div>
+        <div>
+          <div class="comentario-autor"><span class="comentario-nome">Diego L.</span><span class="comentario-meta">Google, 7 out 2026</span></div>
+          <p class="comentario-texto">Não conhecia o captureOnCommitCallbacks. Vou revisar meus testes hoje.</p>
+        </div>
+      </div>
+
+      <form class="entrar" action="#" method="post">
+        <h3 class="inscricao-titulo">Entre para comentar</h3>
+        <p class="inscricao-texto">Seu nome aparece junto ao comentário. Seu e-mail não.</p>
+        <div class="assina-botoes">
+          <button class="botao" type="submit" name="provedor" value="github">Entrar com GitHub</button>
+          <button class="botao" type="submit" name="provedor" value="google">Entrar com Google</button>
+        </div>
+        <p class="nota">Os comentários passam por moderação antes de aparecer.</p>
+      </form>
+    </div>
+  </section>
+</article>
+
+</div>
+
+</main>
+
+<footer class="rodape">
+  <span>ZV Labs, 2026. Feito com Django.</span>
+  <a class="rodape-link" id="portfolio" href="#">Voltar ao portfólio</a>
+</footer>
+
+</div>
+
+<script>
+/* Só para o protótipo: tema, troca de vista pelo hash e filtro por assunto.
+   No Django: a troca de vista vira duas rotas, o filtro vira ?assunto=django
+   no servidor, e só o tema continua no navegador. */
+(function () {
+  var raiz = document.documentElement;
+
+  try {
+    var salvo = localStorage.getItem('zv-tema');
+    if (salvo) { raiz.dataset.tema = salvo; }
+  } catch (e) {}
+
+  function atual() {
+    return raiz.dataset.tema ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'noite' : 'dia');
+  }
+
+  function rotular() {
+    document.querySelectorAll('[data-tema-botao]').forEach(function (b) {
+      b.textContent = atual() === 'noite' ? 'Tema claro' : 'Tema escuro';
+    });
+  }
+
+  var posts = document.querySelectorAll('#vista-lista [data-assuntos]');
+  var filtros = document.querySelectorAll('[data-filtro]');
+  var conta = document.querySelector('[data-conta]');
+
+  function filtrar(assunto) {
+    var visiveis = 0;
+    posts.forEach(function (p) {
+      var ok = assunto === 'todos' || p.dataset.assuntos.split(' ').indexOf(assunto) > -1;
+      p.hidden = !ok;
+      p.classList.remove('post-destaque');
+      if (ok) {
+        visiveis += 1;
+        if (visiveis === 1) { p.classList.add('post-destaque'); }
+      }
+    });
+    filtros.forEach(function (f) {
+      f.setAttribute('aria-pressed', String(f.dataset.filtro === assunto));
+    });
+    conta.textContent = visiveis + (visiveis === 1 ? ' post' : ' posts');
+  }
+
+  document.addEventListener('click', function (ev) {
+    var botaoTema = ev.target.closest('[data-tema-botao]');
+    if (botaoTema) {
+      var novo = atual() === 'noite' ? 'dia' : 'noite';
+      raiz.dataset.tema = novo;
+      try { localStorage.setItem('zv-tema', novo); } catch (e) {}
+      rotular();
+      return;
+    }
+
+    var filtro = ev.target.closest('[data-filtro]');
+    if (filtro) {
+      filtrar(filtro.dataset.filtro);
+      return;
+    }
+
+    var copiar = ev.target.closest('[data-copiar]');
+    if (copiar) {
+      var figura = copiar.closest('.codigo');
+      var texto = Array.prototype.map.call(
+        figura.querySelectorAll('.l'),
+        function (l) { return l.textContent; }
+      ).join('\n');
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(texto).then(function () {
+          copiar.textContent = 'Copiado';
+          setTimeout(function () { copiar.textContent = 'Copiar'; }, 1500);
+        });
+      }
+    }
+  });
+
+  function rota() {
+    var hash = location.hash;
+    document.body.dataset.vista = hash.indexOf('#post') === 0 ? 'post' : 'lista';
+    var alvo = hash.length > 1 ? document.getElementById(hash.slice(1)) : null;
+    if (alvo) { alvo.scrollIntoView(); } else { window.scrollTo(0, 0); }
+  }
+
+  var inscrever = document.querySelector('[data-inscrever]');
+
+  document.addEventListener('click', function (ev) {
+    if (inscrever.open && !inscrever.contains(ev.target)) { inscrever.open = false; }
+  });
+
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && inscrever.open) {
+      inscrever.open = false;
+      inscrever.querySelector('summary').focus();
+    }
+  });
+
+  window.addEventListener('hashchange', rota);
+  rotular();
+  rota();
+})();
+</script>
+</body>
+</html>

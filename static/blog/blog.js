@@ -1,35 +1,64 @@
-// Tema claro/noite e botão "Copiar" nos blocos de código.
-
+/* Tema (dia/noite), botão "Copiar" dos blocos de código e fechamento do
+   painel de inscrição. Veio do protótipo sem a troca de vista e o filtro,
+   que no Django são rotas e ?assunto= no servidor. O tema salvo é aplicado
+   antes, por um script curto no <head> do base.html, para não piscar. */
 (function () {
-  const raiz = document.documentElement;
+  var raiz = document.documentElement;
 
-  document.querySelectorAll("[data-alternar-tema]").forEach(function (botao) {
-    botao.addEventListener("click", function () {
-      const escuroAgora =
-        raiz.dataset.theme === "dark" ||
-        (!raiz.dataset.theme &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches);
-      const novo = escuroAgora ? "light" : "dark";
-      raiz.dataset.theme = novo;
-      try {
-        localStorage.setItem("tema", novo);
-      } catch (e) {}
+  function atual() {
+    return raiz.dataset.tema ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'noite' : 'dia');
+  }
+
+  function rotular() {
+    document.querySelectorAll('[data-tema-botao]').forEach(function (b) {
+      b.textContent = atual() === 'noite' ? 'Tema claro' : 'Tema escuro';
     });
-  });
+  }
 
-  document.querySelectorAll(".texto-post pre").forEach(function (bloco) {
-    const botao = document.createElement("button");
-    botao.type = "button";
-    botao.className = "botao-copiar";
-    botao.textContent = "Copiar";
-    botao.addEventListener("click", function () {
-      const codigo = bloco.querySelector("code");
-      const texto = codigo ? codigo.textContent : "";
+  // Sem JS o botão não faria nada, então ele só aparece aqui.
+  if (navigator.clipboard) {
+    document.querySelectorAll('[data-copiar]').forEach(function (b) {
+      b.hidden = false;
+    });
+  }
+
+  document.addEventListener('click', function (ev) {
+    var botaoTema = ev.target.closest('[data-tema-botao]');
+    if (botaoTema) {
+      var novo = atual() === 'noite' ? 'dia' : 'noite';
+      raiz.dataset.tema = novo;
+      try { localStorage.setItem('zv-tema', novo); } catch (e) {}
+      rotular();
+      return;
+    }
+
+    var copiar = ev.target.closest('[data-copiar]');
+    if (copiar) {
+      var figura = copiar.closest('.codigo');
+      var texto = Array.prototype.map.call(
+        figura.querySelectorAll('.l'),
+        function (l) { return l.textContent; }
+      ).join('\n');
       navigator.clipboard.writeText(texto).then(function () {
-        botao.textContent = "Copiado";
-        setTimeout(function () { botao.textContent = "Copiar"; }, 1500);
+        copiar.textContent = 'Copiado';
+        setTimeout(function () { copiar.textContent = 'Copiar'; }, 1500);
       });
-    });
-    bloco.appendChild(botao);
+    }
   });
+
+  var inscrever = document.querySelector('[data-inscrever]');
+  if (inscrever) {
+    document.addEventListener('click', function (ev) {
+      if (inscrever.open && !inscrever.contains(ev.target)) { inscrever.open = false; }
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && inscrever.open) {
+        inscrever.open = false;
+        inscrever.querySelector('summary').focus();
+      }
+    });
+  }
+
+  rotular();
 })();

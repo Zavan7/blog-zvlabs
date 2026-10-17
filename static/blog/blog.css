@@ -1,190 +1,690 @@
-/* Blog ZV Labs: estilo provisório.
-   A etapa J troca este arquivo pelo <style> do front-end de referência
-   (docs/frontend/blog-zvlabs-v4.html), mantendo os mesmos nomes de classe
-   sempre que possível. */
+/* =====================================================================
+   Blog ZV Labs, versão 3.
+   Uma coluna de leitura e uma margem esquerda que guarda os metadados
+   (data, leitura, assuntos) e, no post, o índice. Neutros frios, um só
+   acento, títulos grandes e apertados.
+   Copiado de docs/frontend/blog-zvlabs-v4.html. Os ajustes para o HTML
+   que o Django gera estão marcados com "Django:"; o resto é igual.
+   ===================================================================== */
 
+/* ---------- Tokens ---------- */
 :root {
-  --fundo: #fafaf8;
-  --superficie: #ffffff;
-  --texto: #1d1d1f;
-  --texto-suave: #5f5f66;
-  --borda: #e3e3e0;
-  --destaque: #2f5bea;
-  --sucesso: #1f7a4d;
-  --erro: #b42318;
-  --raio: 10px;
-  --largura: 760px;
-  --fonte: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --fonte-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
-  color-scheme: light;
+  --bg: #ffffff;
+  --painel: #f5f6f8;
+  --tinta: #101319;
+  --suave: #5d6573;
+  --linha: #e4e7ec;
+  --acento: #1f4fff;
+  --sobre-acento: #ffffff;
+  --verde: #0e7a50;
+
+  --largura: 1040px;
+  --margem-esq: 168px;
+  --respiro: 40px;
+
+  --sans: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+:root[data-tema="noite"] {
+  --bg: #0b0d12;
+  --painel: #13161d;
+  --tinta: #eceef3;
+  --suave: #9aa2b1;
+  --linha: #232834;
+  --acento: #86a6ff;
+  --sobre-acento: #0b0d12;
+  --verde: #7fd6a9;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --fundo: #121214;
-    --superficie: #1b1b1f;
-    --texto: #ececef;
-    --texto-suave: #a0a0aa;
-    --borda: #2c2c33;
-    --destaque: #7c9cff;
-    --sucesso: #4cc38a;
-    --erro: #ff7b72;
-    color-scheme: dark;
+  :root:not([data-tema="dia"]) {
+    --bg: #0b0d12;
+    --painel: #13161d;
+    --tinta: #eceef3;
+    --suave: #9aa2b1;
+    --linha: #232834;
+    --acento: #86a6ff;
+    --sobre-acento: #0b0d12;
+    --verde: #7fd6a9;
   }
 }
 
-:root[data-theme="dark"] {
-  --fundo: #121214;
-  --superficie: #1b1b1f;
-  --texto: #ececef;
-  --texto-suave: #a0a0aa;
-  --borda: #2c2c33;
-  --destaque: #7c9cff;
-  --sucesso: #4cc38a;
-  --erro: #ff7b72;
-  color-scheme: dark;
-}
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
 
-* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  background: var(--fundo);
-  color: var(--texto);
-  font-family: var(--fonte);
-  line-height: 1.6;
+  background: var(--bg);
+  color: var(--tinta);
+  font: 17px/1.65 var(--sans);
+  -webkit-font-smoothing: antialiased;
 }
 
-a { color: var(--destaque); }
+[hidden] { display: none !important; }
 
-.topo, .conteudo, .rodape, .mensagens {
+::selection { background: color-mix(in srgb, var(--acento) 24%, transparent); }
+
+a { color: inherit; }
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+.pular {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 10;
+  padding: 12px 16px;
+  background: var(--tinta);
+  color: var(--bg);
+  border-radius: 8px;
+  font-weight: 500;
+}
+.pular:focus { left: 8px; }
+
+.miolo {
   max-width: var(--largura);
   margin: 0 auto;
-  padding: 0 16px;
+  padding-inline: 24px;
 }
 
+/* Duas colunas: margem de metadados e coluna principal */
+.colunas {
+  display: grid;
+  grid-template-columns: var(--margem-esq) minmax(0, 1fr);
+  column-gap: var(--respiro);
+}
+.coluna-principal { grid-column: 2; min-width: 0; }
+.coluna-margem { grid-column: 1; min-width: 0; }
+
+/* ---------- Barra de leitura (só no post, só onde há suporte) ---------- */
+.progresso { display: none; }
+@supports (animation-timeline: scroll()) {
+  .progresso {
+    display: block;
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 5;
+    height: 2px;
+    background: var(--acento);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    animation: avanca linear both;
+    animation-timeline: scroll(root);
+  }
+  @keyframes avanca { to { transform: scaleX(1); } }
+}
+
+/* ---------- Topo ---------- */
 .topo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+}
+
+.marca {
+  padding: 10px 0;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -.02em;
+  text-decoration: none;
+}
+
+.menu { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+
+.menu-link {
+  display: inline-block;
+  padding: 11px 12px;
+  border-radius: 8px;
+  color: var(--suave);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: color .15s, background-color .15s;
+}
+.menu-link:hover { color: var(--tinta); background: var(--painel); }
+
+.botao-tema {
+  min-height: 40px;
+  margin-left: 8px;
+  padding: 0 14px;
+  background: transparent;
+  color: var(--tinta);
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+  font: 500 14px/1 var(--sans);
+  cursor: pointer;
+  transition: background-color .15s;
+}
+.botao-tema:hover { background: var(--painel); }
+
+/* Inscrição no cabeçalho: botão + painel */
+.inscrever { position: relative; margin-left: 8px; }
+
+.inscrever-botao {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 18px;
+  background: var(--tinta);
+  color: var(--bg);
+  border-radius: 999px;
+  font: 500 14px/1 var(--sans);
+  cursor: pointer;
+  list-style: none;
+  transition: background-color .15s, color .15s;
+}
+.inscrever-botao::-webkit-details-marker { display: none; }
+.inscrever-botao:hover,
+.inscrever[open] .inscrever-botao {
+  background: var(--acento);
+  color: var(--sobre-acento);
+}
+
+.inscrever-painel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 20;
+  width: min(360px, calc(100vw - 48px));
+  padding: 24px;
+  background: var(--bg);
+  border: 1px solid var(--linha);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px -16px rgba(16, 19, 25, .22);
+}
+.inscrever-titulo {
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -.02em;
+}
+.inscrever-texto { margin: 0 0 16px; color: var(--suave); font-size: 15px; line-height: 1.5; }
+.inscrever-painel .botao { width: 100%; margin-top: 10px; }
+.inscrever-painel .nota { margin-top: 14px; }
+
+/* ---------- Capa ---------- */
+.capa { padding: 104px 0 88px; }
+
+.chamada {
+  max-width: 14ch;
+  margin: 0 0 28px;
+  font-size: clamp(44px, 6.6vw, 76px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+
+.apoio {
+  max-width: 40ch;
+  margin: 0;
+  color: var(--suave);
+  font-size: 20px;
+  line-height: 1.55;
+}
+
+.assina-botoes { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 22px;
+  background: transparent;
+  color: var(--tinta);
+  border: 1px solid var(--tinta);
+  border-radius: 999px;
+  font: 500 15px/1 var(--sans);
+  cursor: pointer;
+  transition: background-color .15s, color .15s, border-color .15s;
+}
+.botao:hover {
+  background: var(--acento);
+  color: var(--sobre-acento);
+  border-color: var(--acento);
+}
+
+.nota {
+  max-width: 52ch;
+  margin: 14px 0 0;
+  color: var(--suave);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* ---------- Listagem ---------- */
+.lista { padding-bottom: 112px; }
+
+.lista-topo {
+  align-items: center;
+  padding: 12px 0 20px;
+}
+.lista-rotulo {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+.lista-barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+.filtros { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+
+/* Django: o filtro é link para ?assunto=, então o estado ativo é aria-current. */
+.filtro {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  min-height: 40px;
+  padding: 0 16px;
+  background: transparent;
+  color: var(--suave);
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+  font: 500 14px/1 var(--sans);
+  cursor: pointer;
+  transition: color .15s, background-color .15s, border-color .15s;
+}
+.filtro:hover { color: var(--tinta); border-color: var(--suave); }
+.filtro[aria-pressed="true"],
+.filtro[aria-current="page"] {
+  background: var(--tinta);
+  color: var(--bg);
+  border-color: var(--tinta);
+}
+
+.lista-conta {
+  margin: 0;
+  color: var(--suave);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.post {
+  position: relative;
+  padding: 32px 0 36px;
+  border-top: 1px solid var(--linha);
+}
+
+.post-meta {
+  margin: 0;
+  color: var(--suave);
+  font-size: 14px;
+  line-height: 1.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.post-titulo {
+  margin: 0 0 10px;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -.025em;
+}
+.post-link { color: inherit; text-decoration: none; transition: color .15s; }
+.post-link::after { content: ""; position: absolute; inset: 0; }
+.post-link:focus-visible { outline: none; }
+.post:hover .post-link { color: var(--acento); }
+.post:focus-within { outline: 2px solid var(--acento); outline-offset: 4px; border-radius: 12px; }
+
+.post-resumo {
+  max-width: 56ch;
+  margin: 0;
+  color: var(--suave);
+}
+
+.post-destaque { padding-top: 40px; padding-bottom: 48px; }
+.post-destaque .post-titulo {
+  max-width: 20ch;
+  margin-bottom: 14px;
+  font-size: clamp(30px, 4.4vw, 44px);
+  line-height: 1.08;
+  letter-spacing: -.04em;
+}
+.post-destaque .post-resumo { font-size: 19px; line-height: 1.6; }
+
+/* ---------- Post ---------- */
+.artigo-topo { padding: 40px 0 64px; }
+
+.voltar {
+  display: inline-block;
+  padding: 10px 0;
+  color: var(--suave);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color .15s;
+}
+.voltar:hover { color: var(--tinta); }
+
+.manchete {
+  max-width: 19ch;
+  margin: 0 0 20px;
+  font-size: clamp(34px, 5.2vw, 58px);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -.045em;
+}
+
+.subtitulo {
+  max-width: 40ch;
+  margin: 0;
+  color: var(--suave);
+  font-size: 21px;
+  line-height: 1.55;
+}
+
+.corpo { padding-bottom: 24px; }
+
+.margem-fixa {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  padding-top: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.ficha { margin: 0; }
+.ficha-item { margin: 0 0 20px; }
+.ficha-nome { margin: 0 0 2px; color: var(--suave); }
+.ficha-valor { margin: 0; font-weight: 500; }
+
+.indice { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--linha); }
+.indice-titulo { margin: 0 0 8px; color: var(--suave); }
+.indice-lista { margin: 0; padding: 0; list-style: none; }
+.indice-link {
+  display: inline-block;
+  padding: 4px 0;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color .15s;
+}
+.indice-link:hover { color: var(--acento); }
+
+.texto { font-size: 18.5px; line-height: 1.75; }
+.texto p { margin: 0 0 24px; }
+/* Django: o Markdown gera <h2> e <code> sem classe (filhos diretos de .texto). */
+.texto > h2,
+.texto-titulo {
+  margin: 56px 0 14px;
+  scroll-margin-top: 24px;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -.03em;
+}
+
+.texto :not(pre) > code,
+.inline {
+  padding: 2px 6px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 6px;
+  font: 400 .84em/1 var(--mono);
+}
+
+/* Código com numeração por CSS (não entra na seleção) */
+.codigo {
+  margin: 28px 0 32px;
+  overflow: hidden;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+}
+.codigo-topo {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding-top: 20px;
-  padding-bottom: 20px;
+  min-height: 46px;
+  padding: 0 6px 0 18px;
+  border-bottom: 1px solid var(--linha);
+  color: var(--suave);
+  font: 400 13px/1 var(--mono);
 }
-
-.marca { color: var(--texto); text-decoration: none; font-size: 1.15rem; }
-.acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.acoes form { margin: 0; }
-
-.botao {
-  display: inline-block;
-  border: 1px solid var(--texto);
-  background: var(--texto);
-  color: var(--fundo);
-  padding: 6px 14px;
-  border-radius: var(--raio);
-  font: inherit;
-  cursor: pointer;
-  list-style: none;
-}
-.botao::-webkit-details-marker { display: none; }
-.botao-secundario { background: transparent; color: var(--texto); }
-.botao-largo { width: 100%; margin-top: 8px; }
-.botao-tema {
+.codigo-copiar {
+  min-height: 36px;
+  padding: 0 12px;
   background: transparent;
-  border: 1px solid var(--borda);
-  color: var(--texto);
-  border-radius: var(--raio);
-  padding: 6px 10px;
+  color: var(--tinta);
+  border: 0;
+  border-radius: 8px;
+  font: 500 13.5px/1 var(--sans);
   cursor: pointer;
+  transition: background-color .15s;
 }
-.link { color: var(--texto-suave); font-size: 0.9rem; }
+.codigo-copiar:hover { background: var(--linha); }
 
-.painel-inscricao { position: relative; }
-.painel {
-  position: absolute;
-  right: 0;
-  z-index: 10;
-  width: min(300px, 90vw);
-  margin-top: 8px;
-  padding: 16px;
-  background: var(--superficie);
-  border: 1px solid var(--borda);
-  border-radius: var(--raio);
-}
-.painel p { margin-top: 0; font-size: 0.9rem; color: var(--texto-suave); }
-
-.mensagens { list-style: none; }
-.mensagem {
-  padding: 10px 14px;
-  border-radius: var(--raio);
-  border: 1px solid var(--borda);
-  background: var(--superficie);
-  margin-bottom: 8px;
-}
-.mensagem-success { border-color: var(--sucesso); color: var(--sucesso); }
-.mensagem-error { border-color: var(--erro); color: var(--erro); }
-
-.filtro { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 24px; }
-.etiqueta {
-  padding: 2px 12px;
-  border: 1px solid var(--borda);
-  border-radius: 999px;
-  color: var(--texto-suave);
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-.etiqueta.ativa { border-color: var(--texto); color: var(--texto); }
-
-.cartao-post { padding: 20px 0; border-bottom: 1px solid var(--borda); }
-.cartao-post h2 { margin: 4px 0; font-size: 1.35rem; }
-.cartao-post h2 a { color: var(--texto); text-decoration: none; }
-.cartao-post p { margin: 4px 0; color: var(--texto-suave); }
-time { color: var(--texto-suave); font-size: 0.85rem; }
-
-.assuntos { display: flex; gap: 8px; list-style: none; padding: 0; margin: 8px 0 0; }
-.assuntos a { font-size: 0.8rem; color: var(--texto-suave); }
-
-.post h1 { margin: 4px 0 8px; line-height: 1.25; }
-.resumo { color: var(--texto-suave); font-size: 1.1rem; }
-.voltar { display: inline-block; margin-bottom: 16px; color: var(--texto-suave); }
-.texto-post { margin-top: 32px; }
-.texto-post img { max-width: 100%; height: auto; }
-.texto-post pre {
-  position: relative;
+.codigo-bloco {
+  margin: 0;
+  padding: 16px 18px 20px;
   overflow-x: auto;
-  padding: 16px;
-  background: var(--superficie);
-  border: 1px solid var(--borda);
-  border-radius: var(--raio);
+  counter-reset: n;
+  color: var(--tinta);
+  font: 400 13.5px/1.8 var(--mono);
 }
-code { font-family: var(--fonte-mono); font-size: 0.9em; }
-.botao-copiar {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 0.75rem;
-  padding: 2px 8px;
-  border: 1px solid var(--borda);
-  border-radius: 6px;
-  background: var(--fundo);
-  color: var(--texto-suave);
-  cursor: pointer;
+.l { display: block; white-space: pre; counter-increment: n; }
+.l::before {
+  content: counter(n);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 2.5ch;
+  color: var(--suave);
+  text-align: right;
+  user-select: none;
+}
+.k { color: var(--acento); }
+.s { color: var(--verde); }
+.c { color: var(--suave); }
+
+.aviso {
+  margin: 36px 0 0;
+  padding: 20px 22px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+  font-size: 16.5px;
+  line-height: 1.65;
+}
+.aviso-titulo { display: block; margin-bottom: 4px; font-weight: 600; }
+.aviso p { margin: 0; }
+
+.inscricao-post { padding: 56px 0 8px; }
+.inscricao-titulo {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -.025em;
+}
+.inscricao-texto { margin: 0 0 18px; color: var(--suave); }
+
+/* ---------- Anterior e próximo ---------- */
+.vizinhos { padding: 48px 0 0; }
+.vizinhos-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  padding-top: 28px;
+  border-top: 1px solid var(--linha);
+}
+.vizinho { display: block; text-decoration: none; }
+.vizinho-rotulo { display: block; margin-bottom: 4px; color: var(--suave); font-size: 14px; }
+.vizinho-titulo {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -.02em;
+  transition: color .15s;
+}
+.vizinho:hover .vizinho-titulo { color: var(--acento); }
+.vizinho-prox { text-align: right; }
+
+/* ---------- Comentários ---------- */
+.conversa { padding: 64px 0 112px; }
+.conversa-titulo {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -.02em;
 }
 
-.comentarios { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--borda); }
-.comentario { padding: 12px 0; border-bottom: 1px solid var(--borda); }
-.comentario .autor { margin: 0; font-size: 0.85rem; color: var(--texto-suave); }
-.form-comentario textarea {
+.comentario {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 14px;
+  padding: 22px 0;
+  border-top: 1px solid var(--linha);
+}
+.comentario:first-of-type { margin-top: 16px; }
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 50%;
+  font-size: 15px;
+  font-weight: 600;
+}
+.comentario-autor { display: flex; flex-wrap: wrap; gap: 0 12px; align-items: baseline; }
+.comentario-nome { font-weight: 600; }
+.comentario-meta { color: var(--suave); font-size: 14px; }
+.comentario-texto { margin: 4px 0 0; }
+
+.entrar {
+  margin-top: 8px;
+  padding: 24px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 14px;
+}
+.entrar .inscricao-titulo { font-size: 20px; }
+.entrar .inscricao-texto { margin-bottom: 16px; }
+
+/* ---------- Rodapé ---------- */
+.rodape {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  justify-content: space-between;
+  padding: 28px 0 40px;
+  border-top: 1px solid var(--linha);
+  color: var(--suave);
+  font-size: 14px;
+}
+.rodape-link { display: inline-block; padding: 6px 0; }
+
+/* ---------- Telas estreitas ---------- */
+@media (max-width: 860px) {
+  .colunas { grid-template-columns: minmax(0, 1fr); }
+  .coluna-principal, .coluna-margem { grid-column: 1; }
+  .capa { padding: 64px 0; }
+  .lista-topo { padding-bottom: 12px; }
+  .post { padding: 24px 0 28px; }
+  .post-meta { margin-bottom: 8px; }
+  .margem-fixa {
+    position: static;
+    margin-bottom: 28px;
+    padding: 0 0 8px;
+    border-bottom: 1px solid var(--linha);
+  }
+  .ficha { display: flex; flex-wrap: wrap; gap: 0 28px; }
+  .ficha-item { margin-bottom: 12px; }
+  .indice { display: none; }
+  .texto { font-size: 18px; }
+  .vizinhos-grade { grid-template-columns: minmax(0, 1fr); }
+  .vizinho-prox { text-align: left; }
+}
+
+/* ---------- Painel de inscrição em telas pequenas ---------- */
+@media (max-width: 560px) {
+  .inscrever { position: static; }
+  .inscrever-painel {
+    position: fixed;
+    top: 72px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}
+
+/* ---------- Movimento reduzido ---------- */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+  .progresso { display: none !important; }
+}
+
+/* =====================================================================
+   Django: peças que o protótipo não tinha. Usam só os tokens acima.
+   ===================================================================== */
+
+/* Ações de quem está logado no cabeçalho (botões dentro de formulários) */
+.menu form { margin: 0; }
+button.menu-link { background: transparent; border: 0; font-family: var(--sans); cursor: pointer; }
+button.inscrever-botao { margin-left: 8px; border: 0; }
+
+/* Mensagens de feedback (messages.success / messages.error) */
+.mensagens { margin: 0 0 8px; padding: 0; list-style: none; }
+.mensagem {
+  margin: 0 0 8px;
+  padding: 14px 18px;
+  background: var(--painel);
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+  font-size: 15px;
+}
+.mensagem-success { border-color: var(--verde); }
+.mensagem-error { border-color: var(--tinta); }
+
+/* Lista vazia */
+.vazio { margin: 0; padding: 32px 0; border-top: 1px solid var(--linha); color: var(--suave); }
+
+/* Restante do Markdown */
+.texto ul, .texto ol { margin: 0 0 24px; padding-left: 1.4em; }
+.texto li { margin-bottom: 6px; }
+.texto > h3 { margin: 40px 0 10px; font-size: 21px; font-weight: 600; letter-spacing: -.02em; }
+.texto img { max-width: 100%; height: auto; border-radius: 12px; }
+.texto blockquote { margin: 0 0 24px; padding-left: 18px; border-left: 2px solid var(--linha); color: var(--suave); }
+.texto a { color: var(--acento); }
+.texto table { width: 100%; margin: 0 0 24px; border-collapse: collapse; font-size: 16px; }
+.texto th, .texto td { padding: 8px 10px; border-bottom: 1px solid var(--linha); text-align: left; }
+
+/* Formulário de comentário */
+.campo-rotulo { display: block; margin-bottom: 6px; font-weight: 500; }
+.entrar textarea {
+  display: block;
   width: 100%;
-  padding: 10px;
-  font: inherit;
-  color: var(--texto);
-  background: var(--superficie);
-  border: 1px solid var(--borda);
-  border-radius: var(--raio);
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  background: var(--bg);
+  color: var(--tinta);
+  border: 1px solid var(--linha);
+  border-radius: 10px;
+  font: 16px/1.6 var(--sans);
+  resize: vertical;
 }
-.aviso, .vazio { color: var(--texto-suave); font-size: 0.9rem; }
-.caixa { padding: 24px 0; }
-
-.rodape { padding-top: 48px; padding-bottom: 32px; color: var(--texto-suave); font-size: 0.85rem; }
+.entrar textarea:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.erros { margin: 0 0 12px; padding: 0; list-style: none; color: var(--tinta); font-weight: 500; }

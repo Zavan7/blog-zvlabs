@@ -1,82 +1,101 @@
 {% load static %}
 {% load socialaccount %}
-<!DOCTYPE html>
-<html lang="pt-br">
+<!doctype html>
+<html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>
-    {% block head_title %}
-    Blog ZV Labs
-    {% endblock head_title %}
-  </title>
-  <script>
-    try {
-      const tema = localStorage.getItem("tema");
-      if (tema) document.documentElement.dataset.theme = tema;
-    } catch (e) {}
-  </script>
-  <link rel="stylesheet" href="{% static 'blog/blog.css' %}">
-  {% block extra_head %}
-  {% endblock extra_head %}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>
+{% block head_title %}
+Blog ZV Labs
+{% endblock head_title %}
+</title>
+<script>
+  /* Aplica o tema salvo antes de pintar a página, para não piscar. */
+  try {
+    var temaSalvo = localStorage.getItem('zv-tema');
+    if (temaSalvo) { document.documentElement.dataset.tema = temaSalvo; }
+  } catch (e) {}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="{% static 'blog/blog.css' %}">
+{% block extra_head %}
+{% endblock extra_head %}
 </head>
+
 <body>
-  <header class="topo">
-    <a class="marca" href="{% url 'post_list' %}">Blog <strong>ZV Labs</strong></a>
-    <nav class="acoes">
-      <button type="button" class="botao-tema" data-alternar-tema aria-label="Alternar tema">◐</button>
-      {% if user.is_authenticated %}
-      {% if inscricao_ativa %}
-      <a class="link" href="{{ inscricao_ativa.get_cancelar_url }}">Cancelar inscrição</a>
-      {% else %}
-      <form method="post" action="{% url 'subscribe' %}">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-        <button type="submit" class="botao">Inscrever-se</button>
-      </form>
-      {% endif %}
-      <form method="post" action="{% url 'account_logout' %}">
-        {% csrf_token %}
-        <button type="submit" class="botao botao-secundario">Sair</button>
-      </form>
-      {% else %}
-      <details class="painel-inscricao">
-        <summary class="botao">Inscrever-se</summary>
-        <div class="painel">
-          <p>Entre com sua conta para receber cada post novo por e-mail e comentar.</p>
-          <form method="post" action="{% provider_login_url 'google' %}">
-            {% csrf_token %}
-            <button type="submit" class="botao botao-largo">Entrar com Google</button>
-          </form>
-          <form method="post" action="{% provider_login_url 'github' %}">
-            {% csrf_token %}
-            <button type="submit" class="botao botao-largo">Entrar com GitHub</button>
-          </form>
-        </div>
-      </details>
-      {% endif %}
-    </nav>
-  </header>
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+{% block progresso %}
+{% endblock progresso %}
 
-  {% if messages %}
-  <ul class="mensagens">
-    {% for message in messages %}
-    <li class="mensagem mensagem-{{ message.tags }}">{{ message }}</li>
-    {% endfor %}
-  </ul>
+<div class="miolo">
+
+<header class="topo">
+  <a class="marca" href="{% url 'post_list' %}">ZV Labs</a>
+  <nav class="menu" aria-label="Principal">
+    <a class="menu-link" href="{% url 'post_list' %}#posts">Posts</a>
+    {% if portfolio_url %}
+    <a class="menu-link" href="{{ portfolio_url }}">Portfólio</a>
+    {% endif %}
+    <button class="botao-tema" type="button" data-tema-botao>Tema escuro</button>
+    {% if user.is_authenticated %}
+    {% if inscricao_ativa %}
+    <a class="menu-link" href="{{ inscricao_ativa.get_cancelar_url }}">Cancelar inscrição</a>
+    {% endif %}
+    <form method="post" action="{% url 'account_logout' %}">
+      {% csrf_token %}
+      <button class="menu-link" type="submit">Sair</button>
+    </form>
+    {% if not inscricao_ativa %}
+    <form method="post" action="{% url 'subscribe' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button class="inscrever-botao" type="submit">Inscrever</button>
+    </form>
+    {% endif %}
+    {% else %}
+    <details class="inscrever" data-inscrever>
+      <summary class="inscrever-botao">Inscrever</summary>
+      <form class="inscrever-painel" method="post">
+        {% csrf_token %}
+        <h2 class="inscrever-titulo">Receba cada post novo por e-mail</h2>
+        <p class="inscrever-texto">Entre com sua conta e pronto, sem senha.</p>
+        <button class="botao" type="submit" formaction="{% provider_login_url 'github' next=request.get_full_path %}">Inscrever com GitHub</button>
+        <button class="botao" type="submit" formaction="{% provider_login_url 'google' next=request.get_full_path %}">Inscrever com Google</button>
+        <p class="nota">Guardamos só seu nome e e-mail. Todo e-mail traz um link para cancelar.</p>
+      </form>
+    </details>
+    {% endif %}
+  </nav>
+</header>
+
+<main id="conteudo">
+{% if messages %}
+<ul class="mensagens">
+  {% for message in messages %}
+  <li class="mensagem mensagem-{{ message.tags }}">{{ message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% block content %}
+{% endblock content %}
+</main>
+
+<footer class="rodape">
+  <span>ZV Labs, {% now "Y" %}. Feito com Django.</span>
+  {% if portfolio_url %}
+  <a class="rodape-link" href="{{ portfolio_url }}">Voltar ao portfólio</a>
   {% endif %}
+</footer>
 
-  <main class="conteudo">
-    {% block content %}
-    {% endblock content %}
-  </main>
+</div>
 
-  <footer class="rodape">
-    <p>ZV Labs · Vitor Zavan</p>
-  </footer>
-
-  <script src="{% static 'blog/blog.js' %}" defer></script>
-  {% block extra_body %}
-  {% endblock extra_body %}
+<script src="{% static 'blog/blog.js' %}" defer></script>
+{% block extra_body %}
+{% endblock extra_body %}
 </body>
 </html>

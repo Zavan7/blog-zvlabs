@@ -4,6 +4,7 @@ English:
     Data every template needs (header).
 """
 
+from django.conf import settings
 from django.http import HttpRequest
 
 from blog.models import Inscrito
@@ -37,3 +38,26 @@ def inscricao(request: HttpRequest) -> dict[str, Inscrito | None]:
             usuario_id=request.user.pk, ativo=True
         ).first()
     }
+
+
+def links(request: HttpRequest) -> dict[str, str]:
+    """Disponibiliza o endereço do portfólio para o menu e o rodapé.
+
+    Args:
+        request: requisição atual.
+
+    Returns:
+        ``{"portfolio_url": str}``; vazio quando não configurado, e então
+        o template esconde os links.
+
+    English:
+        Makes the portfolio address available to the menu and footer.
+
+        Args:
+            request: current request.
+
+        Returns:
+            ``{"portfolio_url": str}``; empty when not configured, and the
+            template then hides the links.
+    """
+    return {"portfolio_url": settings.PORTFOLIO_URL}

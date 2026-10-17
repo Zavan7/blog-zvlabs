@@ -93,6 +93,9 @@ CSRF_TRUSTED_ORIGINS = env_lista("CSRF_TRUSTED_ORIGINS")
 # Endereço público do blog, usado nos links dos e-mails (sem barra final).
 SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000").rstrip("/")
 
+# Portfólio ZV Labs (Maestro), para o menu e o rodapé. Vazio esconde os links.
+PORTFOLIO_URL = os.getenv("PORTFOLIO_URL", "").strip()
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -132,6 +135,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "blog.context_processors.inscricao",
+                "blog.context_processors.links",
             ],
         },
     },

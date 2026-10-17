@@ -106,7 +106,9 @@ def post_detail(request: HttpRequest, slug: str) -> HttpResponse:
         Raises:
             Http404: if the post does not exist or is not published.
     """
-    post = get_object_or_404(Post.objects.publicados(), slug=slug)
+    post = get_object_or_404(
+        Post.objects.publicados().select_related("autor"), slug=slug
+    )
     return _pagina_post(request, post, ComentarioForm())
 
 
@@ -238,7 +240,8 @@ def _pagina_post(
     """Renderiza a página do post com os comentários aprovados.
 
     Usada pela página do post e pelo envio de comentário com erro, para
-    as duas mostrarem a mesma coisa.
+    as duas mostrarem a mesma coisa. Também busca o post anterior e o
+    próximo (pela data de publicação) para a navegação do rodapé.
 
     Args:
         request: requisição atual.
@@ -253,7 +256,8 @@ def _pagina_post(
         Renders the post page with the approved comments.
 
         Used by the post page and by a comment submission with errors, so
-        both show the same thing.
+        both show the same thing. It also fetches the previous and next
+        posts (by publication date) for the footer navigation.
 
         Args:
             request: current request.
@@ -264,13 +268,32 @@ def _pagina_post(
         Returns:
             The post page.
     """
-    comentarios = post.comentarios.filter(
-        status=Comentario.Status.APROVADO
-    ).select_related("autor")
+    comentarios = (
+        post.comentarios.filter(status=Comentario.Status.APROVADO)
+        .select_related("autor")
+        .prefetch_related("autor__socialaccount_set")
+    )
+    publicados = Post.objects.publicados()
+    anterior = (
+        publicados.filter(publicado_em__lt=post.publicado_em)
+        .order_by("-publicado_em")
+        .first()
+    )
+    proximo = (
+        publicados.filter(publicado_em__gt=post.publicado_em)
+        .order_by("publicado_em")
+        .first()
+    )
     return render(
         request,
         "blog/post_detail.html",
-        {"post": post, "comentarios": comentarios, "form": form},
+        {
+            "post": post,
+            "comentarios": comentarios,
+            "form": form,
+            "anterior": anterior,
+            "proximo": proximo,
+        },
         status=status,
     )
 
