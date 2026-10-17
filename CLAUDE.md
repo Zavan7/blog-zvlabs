@@ -68,4 +68,4 @@ K. Testes
 L. Deploy e segurança (HTTPS, `ALLOWED_HOSTS`, URIs de callback, SMTP)
 M. README, CHANGELOG, commit
 
-Etapa atual: **J** (A a I prontas na base inicial; falta aplicar o front-end de referência).
+Etapa atual: **L** (A a K prontas; da J falta só o botão no Maestro, fora deste repositório). Pendências técnicas na seção do README.
